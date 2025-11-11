@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>BB-Bounce | Brick Breaker with Global Leaderboard</title>
+  <meta name="description" content="Classic arcade Brick Breaker game with global leaderboard. Can you make it to the top 10?">
+
+  <!-- Umami Analytics -->
+  <script defer src="https://umami.cjunker.dev/script.js" data-website-id="REPLACE_WITH_YOUR_WEBSITE_ID"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Courier New', monospace;
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+      color: #00ff00;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      padding: 10px;
+    }
+
+    #container {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+      max-width: 1400px;
+      width: 100%;
+    }
+
+    #gameArea {
+      flex: 1;
+      min-width: 320px;
+      max-width: 800px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      text-align: center;
+      text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+      margin-bottom: 20px;
+      animation: glow 2s ease-in-out infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% { text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; }
+      50% { text-shadow: 0 0 20px #00ff00, 0 0 40px #00ff00; }
+    }
+
+    #ui {
+      background: rgba(0,0,0,0.8);
+      padding: 15px;
+      border: 2px solid #00ff00;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 15px;
+      font-size: 1.2rem;
+    }
+
+    #ui span {
+      color: #00ffff;
+      font-weight: bold;
+    }
+
+    #canvas {
+      background: #000;
+      border: 3px solid #00ff00;
+      border-radius: 10px;
+      display: block;
+      width: 100%;
+      max-width: 800px;
+      box-shadow: 0 0 30px rgba(0,255,0,0.5);
+    }
+
+    #leaderboard {
+      background: rgba(0,0,0,0.9);
+      border: 2px solid #00ff00;
+      border-radius: 10px;
+      padding: 20px;
+      min-width: 320px;
+      max-width: 400px;
+      max-height: 600px;
+      overflow-y: auto;
+      box-shadow: 0 0 20px rgba(0,255,0,0.3);
+    }
+
+    #leaderboard h2 {
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 1.8rem;
+      color: #ffff00;
+      text-shadow: 0 0 10px #ffff00;
+    }
+
+    #leaderboard ol {
+      list-style: none;
+      padding: 0;
+    }
+
+    #leaderboard li {
+      padding: 12px;
+      margin-bottom: 8px;
+      background: rgba(0,255,0,0.1);
+      border: 1px solid #00ff00;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      transition: all 0.3s;
+    }
+
+    #leaderboard li:hover {
+      background: rgba(0,255,0,0.2);
+      transform: translateX(5px);
+    }
+
+    #leaderboard li:nth-child(1) { border-color: #ffd700; color: #ffd700; }
+    #leaderboard li:nth-child(2) { border-color: #c0c0c0; color: #c0c0c0; }
+    #leaderboard li:nth-child(3) { border-color: #cd7f32; color: #cd7f32; }
+
+    .rank { font-weight: bold; margin-right: 10px; }
+    .player-name { flex: 1; }
+    .player-score { font-weight: bold; color: #00ffff; }
+
+    #controls {
+      margin-top: 20px;
+      text-align: center;
+      background: rgba(0,0,0,0.8);
+      padding: 15px;
+      border: 2px solid #00ff00;
+      border-radius: 10px;
+    }
+
+    #controls p {
+      margin: 5px 0;
+      font-size: 0.9rem;
+    }
+
+    .btn {
+      background: #00ff00;
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 5px;
+      margin: 5px;
+      transition: all 0.3s;
+      font-family: 'Courier New', monospace;
+    }
+
+    .btn:hover {
+      background: #00ffff;
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(0,255,255,0.8);
+    }
+
+    .btn:active {
+      transform: scale(0.95);
+    }
+
+    #gameOverScreen {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      border: 3px solid #ff0000;
+      border-radius: 15px;
+      padding: 40px;
+      text-align: center;
+      z-index: 1000;
+      max-width: 90%;
+    }
+
+    #gameOverScreen.show { display: block; animation: fadeIn 0.5s; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, -60%); }
+      to { opacity: 1; transform: translate(-50%, -50%); }
+    }
+
+    #gameOverScreen h2 {
+      font-size: 3rem;
+      color: #ff0000;
+      text-shadow: 0 0 20px #ff0000;
+      margin-bottom: 20px;
+    }
+
+    #gameOverScreen p {
+      font-size: 1.5rem;
+      margin: 10px 0;
+    }
+
+    #nameInput {
+      background: #000;
+      color: #00ff00;
+      border: 2px solid #00ff00;
+      padding: 10px;
+      font-size: 1.2rem;
+      font-family: 'Courier New', monospace;
+      border-radius: 5px;
+      margin: 20px 0;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    #loading {
+      display: none;
+      color: #00ffff;
+      margin: 10px 0;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0.3; }
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      h1 { font-size: 1.8rem; }
+      #ui { font-size: 1rem; }
+      #leaderboard { min-width: 100%; }
+      #container { flex-direction: column; }
+    }
+
+    /* Scrollbar styling */
+    #leaderboard::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #leaderboard::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.5);
+      border-radius: 10px;
+    }
+
+    #leaderboard::-webkit-scrollbar-thumb {
+      background: #00ff00;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="gameArea">
+      <h1>🎮 BB-BOUNCE</h1>
+
+      <div id="ui">
+        <div>Score: <span id="score">0</span></div>
+        <div>Lives: <span id="lives">3</span></div>
+        <div>Level: <span id="level">1</span></div>
+        <div>High: <span id="highScore">0</span></div>
+      </div>
+
+      <canvas id="canvas" width="800" height="600"></canvas>
+
+      <div id="controls">
+        <p><strong>Controls:</strong> Arrow Keys / Mouse / Touch to move paddle</p>
+        <p>Spacebar or Tap to launch ball | ESC to pause</p>
+        <button class="btn" id="restartBtn">New Game</button>
+        <button class="btn" id="pauseBtn">Pause</button>
+      </div>
+    </div>
+
+    <div id="leaderboard">
+      <h2>🏆 TOP 10 GLOBAL</h2>
+      <ol id="scoresList">
+        <li style="text-align:center; color:#666;">Loading...</li>
+      </ol>
+      <div style="text-align:center; margin-top:20px;">
+        <button class="btn" id="refreshBtn">🔄 Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div id="gameOverScreen">
+    <h2>GAME OVER</h2>
+    <p>Final Score: <span id="finalScore" style="color:#00ffff;">0</span></p>
+    <p>Level Reached: <span id="finalLevel" style="color:#ffff00;">1</span></p>
+    <p id="rankMessage" style="color:#00ff00; margin:20px 0;"></p>
+
+    <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20" value="">
+    <br>
+    <button class="btn" id="submitBtn">Submit Score</button>
+    <button class="btn" id="playAgainBtn">Play Again</button>
+    <p id="loading">Submitting...</p>
+    <p id="submitMessage" style="margin-top:10px;"></p>
+  </div>
+
+  <script>
+    // ============================================
+    // BB-BOUNCE - BRICK BREAKER GAME
+    // Vanilla JavaScript + Canvas API
+    // Author: Christopher Junker
+    // ============================================
+
+    // API Configuration
+    const API_URL = window.location.origin + '/api';
+    const SCORE_SECRET = 'b3481ca0fc3799ed1e124e795eb34420d58281677a4ffa60dfd306b4c7f3fefd';
+
+    // Canvas setup
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Game constants
+    const PADDLE_WIDTH = 100;
+    const PADDLE_HEIGHT = 15;
+    const PADDLE_SPEED = 8;
+    const BALL_RADIUS = 8;
+    const BALL_SPEED_INITIAL = 4;
+    const BRICK_ROWS = 5;
+    const BRICK_COLS = 10;
+    const BRICK_WIDTH = 75;
+    const BRICK_HEIGHT = 20;
+    const BRICK_PADDING = 5;
+    const BRICK_OFFSET_TOP = 60;
+    const BRICK_OFFSET_LEFT = 30;
+
+    // Game state
+    let score = 0;
+    let lives = 3;
+    let level = 1;
+    let highScore = parseInt(localStorage.getItem('bbBounceHigh') || '0');
+    let gameRunning = false;
+    let gamePaused = false;
+    let ballLaunched = false;
+
+    // Paddle
+    let paddleX = (canvas.width - PADDLE_WIDTH) / 2;
+    let rightPressed = false;
+    let leftPressed = false;
+    let mouseX = paddleX;
+    let touchX = paddleX;
+
+    // Ball
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height - 30;
+    let ballSpeedX = 0;
+    let ballSpeedY = 0;
+    let ballSpeed = BALL_SPEED_INITIAL;
+
+    // Bricks
+    let bricks = [];
+
+    // ============================================
+    // GAME INITIALIZATION
+    // ============================================
+
+    function init() {
+      score = 0;
+      lives = 3;
+      level = 1;
+      gameRunning = true;
+      gamePaused = false;
+      ballLaunched = false;
+      ballSpeed = BALL_SPEED_INITIAL;
+      updateUI();
+      initBricks();
+      resetBall();
+      gameLoop();
+      loadLeaderboard();
+    }
+
+    function initBricks() {
+      bricks = [];
+      const colors = ['#ff0000', '#ff7700', '#ffff00', '#00ff00', '#0077ff'];
+      for (let c = 0; c < BRICK_COLS; c++) {
+        bricks[c] = [];
+        for (let r = 0; r < BRICK_ROWS; r++) {
+          bricks[c][r] = {
+            x: c * (BRICK_WIDTH + BRICK_PADDING) + BRICK_OFFSET_LEFT,
+            y: r * (BRICK_HEIGHT + BRICK_PADDING) + BRICK_OFFSET_TOP,
+            status: 1,
+            color: colors[r % colors.length]
+          };
+        }
+      }
+    }
+
+    function resetBall() {
+      ballX = paddleX + PADDLE_WIDTH / 2;
+      ballY = canvas.height - 50;
+      ballSpeedX = 0;
+      ballSpeedY = 0;
+      ballLaunched = false;
+    }
+
+    function launchBall() {
+      if (!ballLaunched && gameRunning && !gamePaused) {
+        const angle = (Math.random() - 0.5) * Math.PI / 3; // -30° to +30°
+        ballSpeedX = ballSpeed * Math.sin(angle);
+        ballSpeedY = -ballSpeed * Math.cos(angle);
+        ballLaunched = true;
+      }
+    }
+
+    // ============================================
+    // GAME LOOP
+    // ============================================
+
+    function gameLoop() {
+      if (!gameRunning) return;
+
+      if (!gamePaused) {
+        update();
+        draw();
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update() {
+      // Move paddle
+      if (rightPressed && paddleX < canvas.width - PADDLE_WIDTH) {
+        paddleX += PADDLE_SPEED;
+      }
+      if (leftPressed && paddleX > 0) {
+        paddleX -= PADDLE_SPEED;
+      }
+
+      // Mouse/touch control
+      if (mouseX !== null) {
+        paddleX = Math.max(0, Math.min(canvas.width - PADDLE_WIDTH, mouseX - PADDLE_WIDTH / 2));
+      }
+
+      // Ball follows paddle if not launched
+      if (!ballLaunched) {
+        ballX = paddleX + PADDLE_WIDTH / 2;
+        ballY = canvas.height - 50;
+        return;
+      }
+
+      // Move ball
+      ballX += ballSpeedX;
+      ballY += ballSpeedY;
+
+      // Wall collision (left/right)
+      if (ballX + ballSpeedX > canvas.width - BALL_RADIUS || ballX + ballSpeedX < BALL_RADIUS) {
+        ballSpeedX = -ballSpeedX;
+      }
+
+      // Wall collision (top)
+      if (ballY + ballSpeedY < BALL_RADIUS) {
+        ballSpeedY = -ballSpeedY;
+      }
+
+      // Paddle collision
+      if (ballY + BALL_RADIUS > canvas.height - PADDLE_HEIGHT - 20 && ballY < canvas.height - 20) {
+        if (ballX > paddleX && ballX < paddleX + PADDLE_WIDTH) {
+          // Add spin based on where ball hits paddle
+          const hitPos = (ballX - paddleX) / PADDLE_WIDTH; // 0 to 1
+          const angle = (hitPos - 0.5) * Math.PI / 2; // -45° to +45°
+          const speed = Math.sqrt(ballSpeedX ** 2 + ballSpeedY ** 2);
+          ballSpeedX = speed * Math.sin(angle);
+          ballSpeedY = -Math.abs(speed * Math.cos(angle)); // Always up
+        }
+      }
+
+      // Bottom collision (lose life)
+      if (ballY + ballSpeedY > canvas.height - BALL_RADIUS) {
+        loseLife();
+      }
+
+      // Brick collision
+      checkBrickCollision();
+    }
+
+    function checkBrickCollision() {
+      for (let c = 0; c < BRICK_COLS; c++) {
+        for (let r = 0; r < BRICK_ROWS; r++) {
+          const brick = bricks[c][r];
+          if (brick.status === 1) {
+            if (
+              ballX > brick.x &&
+              ballX < brick.x + BRICK_WIDTH &&
+              ballY > brick.y &&
+              ballY < brick.y + BRICK_HEIGHT
+            ) {
+              ballSpeedY = -ballSpeedY;
+              brick.status = 0;
+              score += 10;
+              updateUI();
+
+              // Check level complete
+              if (checkAllBricksCleared()) {
+                levelComplete();
+              }
+            }
+          }
+        }
+      }
+    }
+
+    function checkAllBricksCleared() {
+      return bricks.every(col => col.every(brick => brick.status === 0));
+    }
+
+    function levelComplete() {
+      score += level * 100; // Bonus
+      level++;
+      ballSpeed += 0.5; // Increase difficulty
+      initBricks();
+      resetBall();
+      updateUI();
+      showMessage(`Level ${level}!`, '#ffff00');
+    }
+
+    function loseLife() {
+      lives--;
+      updateUI();
+      if (lives <= 0) {
+        gameOver();
+      } else {
+        resetBall();
+        showMessage(`${lives} lives left`, '#ff7700');
+      }
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('bbBounceHigh', highScore);
+      }
+      showGameOverScreen();
+    }
+
+    // ============================================
+    // RENDERING
+    // ============================================
+
+    function draw() {
+      // Clear canvas
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw bricks
+      bricks.forEach(col => {
+        col.forEach(brick => {
+          if (brick.status === 1) {
+            ctx.fillStyle = brick.color;
+            ctx.fillRect(brick.x, brick.y, BRICK_WIDTH, BRICK_HEIGHT);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(brick.x, brick.y, BRICK_WIDTH, BRICK_HEIGHT);
+          }
+        });
+      });
+
+      // Draw paddle
+      ctx.fillStyle = '#00ff00';
+      ctx.fillRect(paddleX, canvas.height - 30, PADDLE_WIDTH, PADDLE_HEIGHT);
+
+      // Draw ball
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, BALL_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = '#00ffff';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.closePath();
+
+      // Draw pause text
+      if (gamePaused) {
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffff00';
+        ctx.font = '48px Courier New';
+        ctx.textAlign = 'center';
+        ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    function updateUI() {
+      document.getElementById('score').textContent = score;
+      document.getElementById('lives').textContent = lives;
+      document.getElementById('level').textContent = level;
+      document.getElementById('highScore').textContent = highScore;
+    }
+
+    function showMessage(text, color) {
+      // Simple flash message on canvas (could be improved)
+      console.log(text);
+    }
+
+    // ============================================
+    // INPUT HANDLING
+    // ============================================
+
+    // Keyboard
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Right' || e.key === 'ArrowRight') rightPressed = true;
+      if (e.key === 'Left' || e.key === 'ArrowLeft') leftPressed = true;
+      if (e.key === ' ' || e.key === 'Spacebar') launchBall();
+      if (e.key === 'Escape') togglePause();
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'Right' || e.key === 'ArrowRight') rightPressed = false;
+      if (e.key === 'Left' || e.key === 'ArrowLeft') leftPressed = false;
+    });
+
+    // Mouse
+    document.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+    });
+
+    canvas.addEventListener('click', launchBall);
+
+    // Touch
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      mouseX = touch.clientX - rect.left;
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      launchBall();
+    });
+
+    // Buttons
+    document.getElementById('restartBtn').addEventListener('click', init);
+    document.getElementById('pauseBtn').addEventListener('click', togglePause);
+    document.getElementById('refreshBtn').addEventListener('click', loadLeaderboard);
+
+    function togglePause() {
+      if (!gameRunning) return;
+      gamePaused = !gamePaused;
+      document.getElementById('pauseBtn').textContent = gamePaused ? 'Resume' : 'Pause';
+    }
+
+    // ============================================
+    // LEADERBOARD API
+    // ============================================
+
+    async function loadLeaderboard() {
+      try {
+        const res = await fetch(`${API_URL}/scores`);
+        const data = await res.json();
+        displayLeaderboard(data.scores || []);
+      } catch (error) {
+        console.error('Failed to load leaderboard:', error);
+        document.getElementById('scoresList').innerHTML = '<li style="color:#ff0000;">Offline</li>';
+      }
+    }
+
+    function displayLeaderboard(scores) {
+      const list = document.getElementById('scoresList');
+      if (scores.length === 0) {
+        list.innerHTML = '<li style="text-align:center;color:#666;">No scores yet!</li>';
+        return;
+      }
+
+      list.innerHTML = scores.map((s, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+        return `
+          <li>
+            <span class="rank">${medal}</span>
+            <span class="player-name">${s.name}</span>
+            <span class="player-score">${s.score.toLocaleString()}</span>
+          </li>
+        `;
+      }).join('');
+    }
+
+    async function submitScore() {
+      const name = document.getElementById('nameInput').value.trim() || 'Anonymous';
+      const loading = document.getElementById('loading');
+      const submitBtn = document.getElementById('submitBtn');
+      const message = document.getElementById('submitMessage');
+
+      loading.style.display = 'block';
+      submitBtn.disabled = true;
+      message.textContent = '';
+
+      try {
+        const res = await fetch(`${API_URL}/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            score,
+            level,
+            secret: SCORE_SECRET
+          })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          message.style.color = '#00ff00';
+          message.textContent = `🎉 Score submitted! You're rank #${data.rank}`;
+          localStorage.setItem('bbBounceName', name);
+          setTimeout(loadLeaderboard, 1000);
+        } else {
+          message.style.color = '#ff0000';
+          message.textContent = data.error || 'Submission failed';
+        }
+      } catch (error) {
+        message.style.color = '#ff7700';
+        message.textContent = 'Offline. Score saved locally.';
+        // Queue for later (could implement retry logic)
+      } finally {
+        loading.style.display = 'none';
+        submitBtn.disabled = false;
+      }
+    }
+
+    function showGameOverScreen() {
+      document.getElementById('finalScore').textContent = score.toLocaleString();
+      document.getElementById('finalLevel').textContent = level;
+      document.getElementById('nameInput').value = localStorage.getItem('bbBounceName') || '';
+
+      const msg = score >= 1000 ? `Amazing! ${score} points!` : score >= 500 ? 'Great job!' : 'Better luck next time!';
+      document.getElementById('rankMessage').textContent = msg;
+
+      document.getElementById('gameOverScreen').classList.add('show');
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', submitScore);
+    document.getElementById('playAgainBtn').addEventListener('click', () => {
+      document.getElementById('gameOverScreen').classList.remove('show');
+      init();
+    });
+
+    document.getElementById('nameInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') submitScore();
+    });
+
+    // ============================================
+    // START GAME
+    // ============================================
+
+    init();
+  </script>
+</body>
+</html>
