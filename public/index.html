@@ -370,6 +370,102 @@
       51%, 100% { opacity: 0.3; }
     }
 
+    /* Settings Modal */
+    #settingsModal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      border: 3px solid var(--primary-green);
+      border-radius: 15px;
+      padding: clamp(20px, 5vw, 40px);
+      z-index: 1000;
+      max-width: 90%;
+      width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    #settingsModal.show {
+      display: block;
+      animation: fadeIn 0.3s;
+    }
+
+    #settingsModal h2 {
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      color: var(--accent-yellow);
+      text-shadow: 0 0 10px var(--accent-yellow);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .setting-group {
+      margin-bottom: 25px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(0,255,0,0.3);
+    }
+
+    .setting-group:last-child {
+      border-bottom: none;
+    }
+
+    .setting-label {
+      display: block;
+      font-size: 1.1rem;
+      color: var(--secondary-cyan);
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    .speed-options {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .speed-option {
+      background: rgba(0,255,0,0.1);
+      border: 2px solid var(--primary-green);
+      color: var(--primary-green);
+      padding: 12px 24px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      transition: all 0.3s;
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .speed-option:hover {
+      background: rgba(0,255,0,0.2);
+      transform: scale(1.05);
+    }
+
+    .speed-option.active {
+      background: var(--primary-green);
+      color: var(--bg-dark);
+      box-shadow: 0 0 20px rgba(0,255,0,0.8);
+    }
+
+    .setting-description {
+      color: #999;
+      font-size: 0.9rem;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    #settingsModal .btn {
+      width: 100%;
+      max-width: 200px;
+      margin: 20px auto 0;
+      display: block;
+    }
+
     /* Additional Mobile Optimizations */
     @media (max-width: 767px) {
       body {
@@ -436,11 +532,12 @@
           <div>Score: <span id="score">0</span></div>
           <div>Lives: <span id="lives">3</span></div>
           <div>Level: <span id="level">1</span></div>
-          <div>High: <span id="highScore">0</span></div>
+          <div>Speed: <span id="speedDisplay">1x</span></div>
         </div>
         <div id="gameControls">
           <button class="btn" id="restartBtn">New Game</button>
           <button class="btn" id="pauseBtn">Pause</button>
+          <button class="btn" id="settingsBtn">⚙️ Settings</button>
         </div>
       </div>
 
@@ -476,6 +573,25 @@
     <button class="btn" id="playAgainBtn">Play Again</button>
     <p id="loading">Submitting...</p>
     <p id="submitMessage" style="margin-top:10px;"></p>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal">
+    <h2>⚙️ GAME SETTINGS</h2>
+
+    <div class="setting-group">
+      <label class="setting-label">Ball Speed Multiplier</label>
+      <div class="speed-options">
+        <button class="speed-option active" data-speed="1">1x Normal</button>
+        <button class="speed-option" data-speed="2">2x Fast</button>
+        <button class="speed-option" data-speed="3">3x Extreme</button>
+      </div>
+      <p class="setting-description">
+        Controls how fast the ball moves. Higher speeds = harder gameplay but more challenge!
+      </p>
+    </div>
+
+    <button class="btn" id="closeSettingsBtn">Close</button>
   </div>
 
   <script>
@@ -541,6 +657,7 @@
     let lives = 3;
     let level = 1;
     let highScore = parseInt(localStorage.getItem('bbBounceHigh') || '0');
+    let speedMultiplier = parseFloat(localStorage.getItem('bbBounceSpeedMultiplier') || '1');
     let gameRunning = false;
     let gamePaused = false;
     let ballLaunched = false;
@@ -628,8 +745,9 @@
     function launchBall() {
       if (!ballLaunched && gameRunning && !gamePaused) {
         const angle = (Math.random() - 0.5) * Math.PI / 3; // -30° to +30°
-        ballSpeedX = ballSpeed * Math.sin(angle);
-        ballSpeedY = -ballSpeed * Math.cos(angle);
+        const effectiveSpeed = ballSpeed * speedMultiplier;
+        ballSpeedX = effectiveSpeed * Math.sin(angle);
+        ballSpeedY = -effectiveSpeed * Math.cos(angle);
         ballLaunched = true;
       }
     }
@@ -692,9 +810,9 @@
           // Add spin based on where ball hits paddle
           const hitPos = (ballX - paddleX) / PADDLE_WIDTH; // 0 to 1
           const angle = (hitPos - 0.5) * Math.PI / 2; // -45° to +45°
-          const speed = Math.sqrt(ballSpeedX ** 2 + ballSpeedY ** 2);
-          ballSpeedX = speed * Math.sin(angle);
-          ballSpeedY = -Math.abs(speed * Math.cos(angle)); // Always up
+          const effectiveSpeed = ballSpeed * speedMultiplier;
+          ballSpeedX = effectiveSpeed * Math.sin(angle);
+          ballSpeedY = -Math.abs(effectiveSpeed * Math.cos(angle)); // Always up
         }
       }
 
@@ -850,7 +968,7 @@
       document.getElementById('score').textContent = score;
       document.getElementById('lives').textContent = lives;
       document.getElementById('level').textContent = level;
-      document.getElementById('highScore').textContent = highScore;
+      document.getElementById('speedDisplay').textContent = speedMultiplier + 'x';
     }
 
     function showMessage(text, color) {
@@ -925,6 +1043,8 @@
     document.getElementById('restartBtn').addEventListener('click', init);
     document.getElementById('pauseBtn').addEventListener('click', togglePause);
     document.getElementById('refreshBtn').addEventListener('click', loadLeaderboard);
+    document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
 
     function togglePause() {
       if (!gameRunning) return;
@@ -935,6 +1055,56 @@
         pauseBtn.textContent = 'Resume';
       } else {
         pauseBtn.textContent = 'Pause';
+      }
+    }
+
+    function openSettings() {
+      // Pause game if running
+      if (gameRunning && !gamePaused) {
+        togglePause();
+      }
+
+      // Update active button based on current speed
+      document.querySelectorAll('.speed-option').forEach(btn => {
+        const btnSpeed = parseFloat(btn.dataset.speed);
+        if (btnSpeed === speedMultiplier) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      document.getElementById('settingsModal').classList.add('show');
+    }
+
+    function closeSettings() {
+      document.getElementById('settingsModal').classList.remove('show');
+    }
+
+    // Speed option handlers
+    document.querySelectorAll('.speed-option').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const newSpeed = parseFloat(e.target.dataset.speed);
+        setSpeedMultiplier(newSpeed);
+
+        // Update active state
+        document.querySelectorAll('.speed-option').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+      });
+    });
+
+    function setSpeedMultiplier(multiplier) {
+      speedMultiplier = multiplier;
+      localStorage.setItem('bbBounceSpeedMultiplier', multiplier);
+      updateUI();
+
+      // If ball is launched, update its speed immediately
+      if (ballLaunched) {
+        const currentSpeed = Math.sqrt(ballSpeedX ** 2 + ballSpeedY ** 2);
+        const targetSpeed = ballSpeed * speedMultiplier;
+        const ratio = targetSpeed / currentSpeed;
+        ballSpeedX *= ratio;
+        ballSpeedY *= ratio;
       }
     }
 
