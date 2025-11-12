@@ -831,10 +831,9 @@
       const totalPadding = BRICK_PADDING * (BRICK_COLS - 1);
       const brickWidth = (availableWidth - totalPadding) / BRICK_COLS;
 
-      // Scale brick height proportionally and fit within canvas
-      const availableHeight = canvas.height * 0.5; // Use top 50% of canvas
-      const totalRowPadding = BRICK_PADDING * (currentRows - 1);
-      const brickHeight = (availableHeight - totalRowPadding - BRICK_OFFSET_TOP) / currentRows;
+      // Use consistent brick height (scaled proportionally for responsive width)
+      // This keeps bricks at fixed height across all levels, letting rows naturally fill more space
+      const brickHeight = BRICK_HEIGHT * (brickWidth / BRICK_WIDTH);
 
       for (let c = 0; c < BRICK_COLS; c++) {
         bricks[c] = [];
