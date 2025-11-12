@@ -680,6 +680,119 @@
     let bricks = [];
 
     // ============================================
+    // DIFFICULTY SCALING SYSTEM
+    // ============================================
+
+    /**
+     * Calculate number of brick rows based on current level
+     * Levels 1-5: Add 1 row per level (5, 6, 7, 8, 9 rows)
+     * Level 6+: Cap at 10 rows maximum
+     * @param {number} currentLevel - The current game level
+     * @returns {number} Number of brick rows (5-10)
+     */
+    function calculateBrickRows(currentLevel) {
+      const baseRows = 5;
+      const maxRows = 10;
+      return Math.min(baseRows + currentLevel - 1, maxRows);
+    }
+
+    /**
+     * Calculate block hit requirements based on level
+     * Levels 1-6: All 1-hit blocks
+     * Levels 7+: Progressive introduction of multi-hit blocks
+     * @param {number} currentLevel - The current game level
+     * @param {number} rowIndex - Row index (0-based)
+     * @returns {number} Required hits to destroy (1-4)
+     */
+    function calculateBlockHitRequirement(currentLevel, rowIndex) {
+      // Phase 1: Levels 1-6 - Standard 1-hit blocks only
+      if (currentLevel <= 6) {
+        return 1;
+      }
+
+      // Phase 2: Levels 7-9 - Introduce 2-hit blocks (50%)
+      if (currentLevel >= 7 && currentLevel <= 9) {
+        // Top 50% of rows become 2-hit blocks
+        const totalRows = calculateBrickRows(currentLevel);
+        const twoHitThreshold = Math.floor(totalRows / 2);
+        return rowIndex < twoHitThreshold ? 2 : 1;
+      }
+
+      // Phase 3: Levels 10-12 - Add 3-hit blocks
+      if (currentLevel >= 10 && currentLevel <= 12) {
+        const totalRows = calculateBrickRows(currentLevel);
+        const threeHitThreshold = Math.floor(totalRows * 0.25); // Top 25%
+        const twoHitThreshold = Math.floor(totalRows * 0.65); // Next 40%
+
+        if (rowIndex < threeHitThreshold) return 3;
+        if (rowIndex < twoHitThreshold) return 2;
+        return 1;
+      }
+
+      // Phase 4: Levels 13+ - Progressive hardening
+      if (currentLevel >= 13) {
+        const totalRows = calculateBrickRows(currentLevel);
+        const threeHitThreshold = Math.floor(totalRows * 0.5); // Top 50%
+        const twoHitThreshold = Math.floor(totalRows * 0.8); // Next 30%
+
+        if (rowIndex < threeHitThreshold) return 3;
+        if (rowIndex < twoHitThreshold) return 2;
+        return 1;
+      }
+
+      return 1;
+    }
+
+    /**
+     * Get color for brick based on hit requirement and current state
+     * @param {number} maxHits - Maximum hits required
+     * @param {number} currentHits - Current hit count
+     * @param {number} rowIndex - Row index for base color
+     * @returns {string} Hex color code
+     */
+    function getBrickColor(maxHits, currentHits, rowIndex) {
+      const baseColors = ['#ff0000', '#ff7700', '#ffff00', '#00ff00', '#0077ff'];
+      const baseColor = baseColors[rowIndex % baseColors.length];
+
+      // For 1-hit blocks, use standard bright colors
+      if (maxHits === 1) {
+        return baseColor;
+      }
+
+      // For multi-hit blocks, darken based on remaining hits
+      const hitRatio = currentHits / maxHits;
+
+      // Parse hex color
+      const r = parseInt(baseColor.substr(1, 2), 16);
+      const g = parseInt(baseColor.substr(3, 2), 16);
+      const b = parseInt(baseColor.substr(5, 2), 16);
+
+      // Darken color based on damage (more hits = darker)
+      const darkenFactor = 0.4 + (hitRatio * 0.6); // 40% to 100% brightness
+      const newR = Math.floor(r * darkenFactor);
+      const newG = Math.floor(g * darkenFactor);
+      const newB = Math.floor(b * darkenFactor);
+
+      return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
+    }
+
+    /**
+     * Calculate score for destroying a block
+     * @param {number} maxHits - Maximum hits required for this block
+     * @returns {number} Points awarded
+     */
+    function calculateBlockScore(maxHits) {
+      const baseScore = 10;
+      switch(maxHits) {
+        case 1: return baseScore;        // 10 points
+        case 2: return baseScore * 2.5;  // 25 points
+        case 3: return baseScore * 5;    // 50 points
+        case 4: return baseScore * 10;   // 100 points
+        default: return baseScore;
+      }
+    }
+
+    // ============================================
     // GAME INITIALIZATION
     // ============================================
 
@@ -708,7 +821,9 @@
 
     function initBricks() {
       bricks = [];
-      const colors = ['#ff0000', '#ff7700', '#ffff00', '#00ff00', '#0077ff'];
+
+      // Calculate dynamic number of rows based on current level
+      const currentRows = calculateBrickRows(level);
 
       // Calculate responsive brick dimensions
       const margin = 20; // Side margins
@@ -716,19 +831,26 @@
       const totalPadding = BRICK_PADDING * (BRICK_COLS - 1);
       const brickWidth = (availableWidth - totalPadding) / BRICK_COLS;
 
-      // Scale brick height proportionally
-      const brickHeight = BRICK_HEIGHT * (brickWidth / BRICK_WIDTH);
+      // Scale brick height proportionally and fit within canvas
+      const availableHeight = canvas.height * 0.5; // Use top 50% of canvas
+      const totalRowPadding = BRICK_PADDING * (currentRows - 1);
+      const brickHeight = (availableHeight - totalRowPadding - BRICK_OFFSET_TOP) / currentRows;
 
       for (let c = 0; c < BRICK_COLS; c++) {
         bricks[c] = [];
-        for (let r = 0; r < BRICK_ROWS; r++) {
+        for (let r = 0; r < currentRows; r++) {
+          // Calculate hit requirements for this block
+          const maxHits = calculateBlockHitRequirement(level, r);
+
           bricks[c][r] = {
             x: margin + c * (brickWidth + BRICK_PADDING),
             y: BRICK_OFFSET_TOP + r * (brickHeight + BRICK_PADDING),
             width: brickWidth,
             height: brickHeight,
-            status: 1,
-            color: colors[r % colors.length]
+            status: 1,                    // 0 = destroyed, 1 = active
+            maxHits: maxHits,             // NEW: Total hits required to destroy
+            currentHits: 0,               // NEW: Number of times hit
+            color: getBrickColor(maxHits, 0, r)
           };
         }
       }
@@ -827,25 +949,50 @@
 
     function checkBrickCollision() {
       for (let c = 0; c < BRICK_COLS; c++) {
-        for (let r = 0; r < BRICK_ROWS; r++) {
-          const brick = bricks[c][r];
-          if (brick.status === 1) {
-            if (
-              ballX > brick.x &&
-              ballX < brick.x + brick.width &&
-              ballY > brick.y &&
-              ballY < brick.y + brick.height
-            ) {
-              ballSpeedY = -ballSpeedY;
-              brick.status = 0;
-              score += 10;
-              updateUI();
+        // Use actual array length for dynamic rows
+        if (!bricks[c]) continue;
 
-              // Check level complete
-              if (checkAllBricksCleared()) {
-                levelComplete();
-              }
+        for (let r = 0; r < bricks[c].length; r++) {
+          const brick = bricks[c][r];
+          if (!brick || brick.status === 0) continue;
+
+          // Check collision
+          if (
+            ballX > brick.x &&
+            ballX < brick.x + brick.width &&
+            ballY > brick.y &&
+            ballY < brick.y + brick.height
+          ) {
+            // Bounce ball
+            ballSpeedY = -ballSpeedY;
+
+            // Increment hit count
+            brick.currentHits++;
+
+            // Check if brick should be destroyed
+            if (brick.currentHits >= brick.maxHits) {
+              // Destroy brick
+              brick.status = 0;
+
+              // Award full score based on block difficulty
+              score += calculateBlockScore(brick.maxHits);
+            } else {
+              // Partial hit - award partial points and update color
+              score += 5; // Partial credit for hitting but not destroying
+
+              // Update brick color to show damage
+              brick.color = getBrickColor(brick.maxHits, brick.currentHits, r);
             }
+
+            updateUI();
+
+            // Check level complete
+            if (checkAllBricksCleared()) {
+              levelComplete();
+            }
+
+            // Only process one brick collision per frame
+            return;
           }
         }
       }
@@ -898,11 +1045,29 @@
       bricks.forEach(col => {
         col.forEach(brick => {
           if (brick.status === 1) {
+            // Draw brick fill
             ctx.fillStyle = brick.color;
             ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
+
+            // Draw border (enhanced for multi-hit blocks)
+            if (brick.maxHits > 1) {
+              // Multi-hit blocks have thicker, glowing borders
+              ctx.strokeStyle = brick.currentHits > 0 ? '#ff00ff' : '#00ffff';
+              ctx.lineWidth = 2;
+              ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
+
+              // Add inner border for damaged blocks
+              if (brick.currentHits > 0) {
+                ctx.strokeStyle = 'rgba(255,0,255,0.5)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(brick.x + 2, brick.y + 2, brick.width - 4, brick.height - 4);
+              }
+            } else {
+              // Standard blocks have thin white borders
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 1;
+              ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
+            }
           }
         });
       });
