@@ -91,6 +91,20 @@
       50% { text-shadow: 0 0 20px var(--primary-green), 0 0 40px var(--primary-green); }
     }
 
+    /* Top Bar: Stats and Controls Side-by-Side */
+    #topBar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+    }
+
+    @media (max-width: 767px) {
+      #topBar {
+        gap: var(--spacing-sm);
+      }
+    }
+
     /* Responsive UI Stats Panel */
     #ui {
       background: rgba(0,0,0,0.8);
@@ -98,9 +112,9 @@
       border: 2px solid var(--primary-green);
       border-radius: var(--border-radius);
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      grid-template-columns: repeat(2, 1fr);
       gap: var(--spacing-sm);
-      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      font-size: clamp(0.9rem, 2.5vw, 1.1rem);
       text-align: center;
     }
 
@@ -113,6 +127,33 @@
       font-weight: bold;
       display: block;
       margin-top: 5px;
+    }
+
+    /* Game Controls Box */
+    #gameControls {
+      background: rgba(0,0,0,0.8);
+      padding: clamp(10px, 3vw, 15px);
+      border: 2px solid var(--primary-green);
+      border-radius: var(--border-radius);
+      display: flex;
+      gap: var(--spacing-sm);
+      align-items: center;
+      justify-content: center;
+    }
+
+    #gameControls .btn {
+      margin: 0;
+      flex: 1;
+      max-width: 150px;
+    }
+
+    @media (max-width: 767px) {
+      #gameControls .btn {
+        font-size: clamp(0.8rem, 2vw, 0.9rem);
+        padding: 8px 12px;
+        min-width: 80px;
+        max-width: none;
+      }
     }
 
     /* Responsive Canvas */
@@ -193,23 +234,24 @@
     .player-name { flex: 1; }
     .player-score { font-weight: bold; color: #00ffff; }
 
-    /* Responsive Controls */
+    /* Responsive Controls - Instructions Only */
     #controls {
       text-align: center;
       background: rgba(0,0,0,0.8);
-      padding: var(--spacing-md);
+      padding: clamp(8px, 2vw, 12px);
       border: 2px solid var(--primary-green);
       border-radius: var(--border-radius);
     }
 
     #controls p {
       margin: 5px 0;
-      font-size: clamp(0.8rem, 2vw, 0.9rem);
+      font-size: clamp(0.75rem, 2vw, 0.85rem);
+      color: var(--secondary-cyan);
     }
 
-    /* Hide keyboard controls hint on mobile */
+    /* Hide control instructions on mobile to save space */
     @media (max-width: 767px) {
-      #controls p:first-of-type {
+      #controls {
         display: none;
       }
     }
@@ -240,8 +282,9 @@
       transform: scale(0.95);
     }
 
+    /* Mobile button adjustments for game over modal */
     @media (max-width: 767px) {
-      .btn {
+      #gameOverScreen .btn {
         width: 100%;
         max-width: 280px;
         margin: 8px auto;
@@ -387,11 +430,18 @@
     <div id="gameArea">
       <h1>🎮 BB-BOUNCE</h1>
 
-      <div id="ui">
-        <div>Score: <span id="score">0</span></div>
-        <div>Lives: <span id="lives">3</span></div>
-        <div>Level: <span id="level">1</span></div>
-        <div>High: <span id="highScore">0</span></div>
+      <!-- Top Bar: Stats + Controls -->
+      <div id="topBar">
+        <div id="ui">
+          <div>Score: <span id="score">0</span></div>
+          <div>Lives: <span id="lives">3</span></div>
+          <div>Level: <span id="level">1</span></div>
+          <div>High: <span id="highScore">0</span></div>
+        </div>
+        <div id="gameControls">
+          <button class="btn" id="restartBtn">New Game</button>
+          <button class="btn" id="pauseBtn">Pause</button>
+        </div>
       </div>
 
       <canvas id="canvas" width="800" height="600"></canvas>
@@ -399,8 +449,6 @@
       <div id="controls">
         <p><strong>Controls:</strong> Arrow Keys / Mouse / Touch to move paddle</p>
         <p>Spacebar or Tap to launch ball | ESC to pause</p>
-        <button class="btn" id="restartBtn">New Game</button>
-        <button class="btn" id="pauseBtn">Pause</button>
       </div>
     </div>
 
