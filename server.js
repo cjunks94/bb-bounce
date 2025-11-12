@@ -22,9 +22,17 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"], // Needed for inline game code
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'", // Needed for inline game code
+        "https://umami.cjunker.dev", // Umami analytics
+        "https://static.cloudflareinsights.com" // Cloudflare insights
+      ],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"]
+      connectSrc: [
+        "'self'",
+        "https://umami.cjunker.dev" // Allow Umami analytics connections
+      ]
     }
   }
 }));
