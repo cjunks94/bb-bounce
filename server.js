@@ -25,14 +25,13 @@ app.use(helmet({
       scriptSrc: [
         "'self'",
         "'unsafe-inline'", // Needed for inline game code
-        "https://umami.cjunker.dev", // Umami analytics
+        "https://umami-tracking.cjunker.dev", // Umami analytics (public tracking)
         "https://static.cloudflareinsights.com" // Cloudflare insights
       ],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: [
         "'self'",
-        "https://umami.cjunker.dev", // Allow Umami analytics connections
-        "https://cjunkerdev.cloudflareaccess.com" // Cloudflare Access for Umami auth
+        "https://umami-tracking.cjunker.dev" // Allow Umami tracking connections
       ]
     }
   }
