@@ -595,8 +595,10 @@
 
       if (!gamePaused) {
         update();
-        draw();
       }
+
+      // Always draw, even when paused (shows scene with overlay)
+      draw();
 
       requestAnimationFrame(gameLoop);
     }
@@ -753,27 +755,46 @@
       ctx.stroke();
       ctx.closePath();
 
-      // Draw pause text
+      // Draw pause overlay with button
       if (gamePaused) {
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        // Semi-transparent overlay (lighter so game is visible)
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#ffff00';
-
-        // Responsive font size
-        const fontSize = Math.min(canvas.width / 12, 48);
-        ctx.font = `bold ${fontSize}px Courier New`;
-        ctx.textAlign = 'center';
 
         const isMobile = window.innerWidth < 768;
-        const message = isMobile ? 'TAP TO START' : 'PAUSED';
+
+        // Draw centered START button
+        const buttonWidth = Math.min(canvas.width * 0.6, 300);
+        const buttonHeight = 80;
+        const buttonX = (canvas.width - buttonWidth) / 2;
+        const buttonY = (canvas.height - buttonHeight) / 2;
+
+        // Button shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(buttonX + 4, buttonY + 4, buttonWidth, buttonHeight);
+
+        // Button background
+        ctx.fillStyle = '#00ff00';
+        ctx.fillRect(buttonX, buttonY, buttonWidth, buttonHeight);
+
+        // Button border
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(buttonX, buttonY, buttonWidth, buttonHeight);
+
+        // Button text
+        const fontSize = Math.min(buttonWidth / 6, 36);
+        ctx.fillStyle = '#000';
+        ctx.font = `bold ${fontSize}px Courier New`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const message = isMobile ? 'TAP TO START' : 'CLICK TO START';
         ctx.fillText(message, canvas.width / 2, canvas.height / 2);
 
-        // Show subtitle on mobile
-        if (isMobile) {
-          ctx.font = `${fontSize * 0.4}px Courier New`;
-          ctx.fillStyle = '#00ff00';
-          ctx.fillText('Press the Start button', canvas.width / 2, canvas.height / 2 + fontSize);
-        }
+        // Instruction text above button
+        ctx.font = `${fontSize * 0.5}px Courier New`;
+        ctx.fillStyle = '#ffff00';
+        ctx.fillText('Game Ready', canvas.width / 2, buttonY - 30);
       }
     }
 
@@ -809,17 +830,29 @@
     // Mouse
     document.addEventListener('mousemove', (e) => {
       const rect = canvas.getBoundingClientRect();
-      mouseX = e.clientX - rect.left;
+      // Scale mouse position to canvas coordinates
+      const scaleX = canvas.width / rect.width;
+      mouseX = (e.clientX - rect.left) * scaleX;
     });
 
-    canvas.addEventListener('click', launchBall);
+    canvas.addEventListener('click', (e) => {
+      // If paused, clicking unpauses (acts like Start button)
+      if (gamePaused) {
+        togglePause();
+      } else {
+        // If not paused, launch ball
+        launchBall();
+      }
+    });
 
     // Touch
     canvas.addEventListener('touchmove', (e) => {
       e.preventDefault();
       const rect = canvas.getBoundingClientRect();
       const touch = e.touches[0];
-      mouseX = touch.clientX - rect.left;
+      // Scale touch position to canvas coordinates
+      const scaleX = canvas.width / rect.width;
+      mouseX = (touch.clientX - rect.left) * scaleX;
     }, { passive: false });
 
     canvas.addEventListener('touchstart', (e) => {
@@ -827,10 +860,15 @@
       // Snap paddle to touch position
       const rect = canvas.getBoundingClientRect();
       const touch = e.touches[0];
-      mouseX = touch.clientX - rect.left;
+      // Scale touch position to canvas coordinates
+      const scaleX = canvas.width / rect.width;
+      mouseX = (touch.clientX - rect.left) * scaleX;
 
-      // Don't launch ball if paused (prevents accidental start while scrolling)
-      if (!gamePaused) {
+      // If paused, unpause (acts like Start button)
+      if (gamePaused) {
+        togglePause();
+      } else {
+        // If not paused, launch ball
         launchBall();
       }
     }, { passive: false });
