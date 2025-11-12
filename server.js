@@ -31,7 +31,8 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: [
         "'self'",
-        "https://umami.cjunker.dev" // Allow Umami analytics connections
+        "https://umami.cjunker.dev", // Allow Umami analytics connections
+        "https://cjunkerdev.cloudflareaccess.com" // Cloudflare Access for Umami auth
       ]
     }
   }
