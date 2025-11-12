@@ -317,54 +317,39 @@ describe('Progressive Difficulty System', () => {
   });
 
   describe('Canvas Scaling with Dynamic Rows', () => {
-    it('should calculate brick height based on fixed height scaling', () => {
-      const canvasWidth = 600;
-      const margin = 20;
-      const brickCols = 10;
-      const brickPadding = 5;
-      const baseBrickWidth = 75;
-      const baseBrickHeight = 20;
-
-      // Calculate responsive brick dimensions (matching game code)
-      const availableWidth = canvasWidth - (margin * 2);
-      const totalPadding = brickPadding * (brickCols - 1);
-      const brickWidth = (availableWidth - totalPadding) / brickCols;
-      const brickHeight = baseBrickHeight * (brickWidth / baseBrickWidth);
-
-      // Both 5 and 10 rows should have same brick height (fixed height approach)
-      expect(brickHeight).toBeCloseTo(13.73, 1);
-
-      // Verify 5 rows doesn't affect brick height
-      const height5Rows = brickHeight;
-      const height10Rows = brickHeight;
-
-      expect(height5Rows).toBe(height10Rows);
-      expect(height5Rows).toBeCloseTo(13.73, 1);
-      expect(height10Rows).toBeCloseTo(13.73, 1);
-    });
-
-    it('should calculate natural grid height for dynamic rows', () => {
-      const canvasWidth = 600;
-      const margin = 20;
-      const brickCols = 10;
+    it('should calculate brick height based on number of rows', () => {
+      const canvasHeight = 600;
+      const availableHeight = canvasHeight * 0.5;
       const brickPadding = 5;
       const offsetTop = 60;
-      const baseBrickWidth = 75;
-      const baseBrickHeight = 20;
 
-      // Calculate fixed brick height
-      const availableWidth = canvasWidth - (margin * 2);
-      const totalPadding = brickPadding * (brickCols - 1);
-      const brickWidth = (availableWidth - totalPadding) / brickCols;
-      const brickHeight = baseBrickHeight * (brickWidth / baseBrickWidth);
+      const calculateBrickHeight = (rows) => {
+        const totalRowPadding = brickPadding * (rows - 1);
+        return (availableHeight - totalRowPadding - offsetTop) / rows;
+      };
 
-      // 5 rows should take less vertical space than 10 rows
-      const totalHeight5 = offsetTop + (5 * brickHeight) + (brickPadding * 4);
-      const totalHeight10 = offsetTop + (10 * brickHeight) + (brickPadding * 9);
+      // 5 rows should have taller bricks than 10 rows
+      const height5Rows = calculateBrickHeight(5);
+      const height10Rows = calculateBrickHeight(10);
 
-      expect(totalHeight10).toBeGreaterThan(totalHeight5);
-      expect(totalHeight5).toBeCloseTo(offsetTop + 5 * 13.73 + 20, 1);
-      expect(totalHeight10).toBeCloseTo(offsetTop + 10 * 13.73 + 45, 1);
+      expect(height5Rows).toBeGreaterThan(height10Rows);
+      expect(height5Rows).toBeCloseTo(44, 1); // Allow 1 decimal precision
+      expect(height10Rows).toBeCloseTo(19.5, 1);
+    });
+
+    it('should fit all rows within available canvas space', () => {
+      const canvasHeight = 600;
+      const availableHeight = canvasHeight * 0.5;
+      const brickPadding = 5;
+      const offsetTop = 60;
+
+      for (let rows = 5; rows <= 10; rows++) {
+        const totalRowPadding = brickPadding * (rows - 1);
+        const brickHeight = (availableHeight - totalRowPadding - offsetTop) / rows;
+        const totalHeight = offsetTop + (rows * brickHeight) + totalRowPadding;
+
+        expect(totalHeight).toBeLessThanOrEqual(availableHeight + offsetTop);
+      }
     });
   });
 
