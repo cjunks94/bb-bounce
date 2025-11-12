@@ -79,6 +79,13 @@
       animation: glow 2s ease-in-out infinite;
     }
 
+    /* Hide header on mobile to maximize game space */
+    @media (max-width: 767px) {
+      h1 {
+        display: none;
+      }
+    }
+
     @keyframes glow {
       0%, 100% { text-shadow: 0 0 10px var(--primary-green), 0 0 20px var(--primary-green); }
       50% { text-shadow: 0 0 20px var(--primary-green), 0 0 40px var(--primary-green); }
@@ -438,7 +445,36 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
 
-    // Game constants
+    // Responsive canvas sizing
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      // Determine aspect ratio based on viewport
+      const isMobile = window.innerWidth < 768;
+      const isLandscape = window.innerWidth > window.innerHeight;
+
+      let targetWidth, targetHeight;
+
+      if (isMobile && !isLandscape) {
+        // Mobile portrait: 3:4 ratio (taller canvas)
+        targetWidth = 600;
+        targetHeight = 800;
+      } else if (isMobile && isLandscape) {
+        // Mobile landscape: 16:9 ratio
+        targetWidth = 800;
+        targetHeight = 450;
+      } else {
+        // Desktop: 4:3 ratio (original)
+        targetWidth = 800;
+        targetHeight = 600;
+      }
+
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+    }
+
+    // Game constants (will scale with canvas size)
     const PADDLE_WIDTH = 100;
     const PADDLE_HEIGHT = 15;
     const PADDLE_SPEED = 8;
@@ -483,11 +519,19 @@
     // ============================================
 
     function init() {
+      resizeCanvas(); // Set canvas dimensions based on viewport
       score = 0;
       lives = 3;
       level = 1;
       gameRunning = true;
-      gamePaused = false;
+
+      // Start paused on mobile to prevent accidental starts
+      const isMobile = window.innerWidth < 768;
+      gamePaused = isMobile;
+      if (gamePaused) {
+        document.getElementById('pauseBtn').textContent = 'Start';
+      }
+
       ballLaunched = false;
       ballSpeed = BALL_SPEED_INITIAL;
       updateUI();
@@ -702,9 +746,22 @@
         ctx.fillStyle = 'rgba(0,0,0,0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#ffff00';
-        ctx.font = '48px Courier New';
+
+        // Responsive font size
+        const fontSize = Math.min(canvas.width / 12, 48);
+        ctx.font = `bold ${fontSize}px Courier New`;
         ctx.textAlign = 'center';
-        ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+
+        const isMobile = window.innerWidth < 768;
+        const message = isMobile ? 'TAP TO START' : 'PAUSED';
+        ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+
+        // Show subtitle on mobile
+        if (isMobile) {
+          ctx.font = `${fontSize * 0.4}px Courier New`;
+          ctx.fillStyle = '#00ff00';
+          ctx.fillText('Press the Start button', canvas.width / 2, canvas.height / 2 + fontSize);
+        }
       }
     }
 
@@ -759,7 +816,11 @@
       const rect = canvas.getBoundingClientRect();
       const touch = e.touches[0];
       mouseX = touch.clientX - rect.left;
-      launchBall();
+
+      // Don't launch ball if paused (prevents accidental start while scrolling)
+      if (!gamePaused) {
+        launchBall();
+      }
     });
 
     // Buttons
@@ -770,7 +831,13 @@
     function togglePause() {
       if (!gameRunning) return;
       gamePaused = !gamePaused;
-      document.getElementById('pauseBtn').textContent = gamePaused ? 'Resume' : 'Pause';
+
+      const pauseBtn = document.getElementById('pauseBtn');
+      if (gamePaused) {
+        pauseBtn.textContent = 'Resume';
+      } else {
+        pauseBtn.textContent = 'Pause';
+      }
     }
 
     // ============================================
