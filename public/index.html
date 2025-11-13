@@ -13,8 +13,32 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="BB-Bounce">
 
-  <!-- Umami Analytics (using public tracking endpoint) -->
-  <script defer src="https://umami-tracking.cjunker.dev/script.js" data-website-id="8966340b-9995-44ac-9b62-5b6caffd6f82"></script>
+  <!-- Umami Analytics (environment-aware) -->
+  <script>
+    (function() {
+      // Detect environment based on hostname
+      const hostname = window.location.hostname;
+      const isStaging = hostname.includes('staging') || hostname === 'localhost' || hostname === '127.0.0.1';
+
+      // Environment-specific tracking IDs
+      const TRACKING_IDS = {
+        staging: 'fc7ca2dc-d007-4384-a606-d9e5d66e7c46',
+        production: '8966340b-9995-44ac-9b62-5b6caffd6f82'
+      };
+
+      // Select appropriate tracking ID
+      const websiteId = isStaging ? TRACKING_IDS.staging : TRACKING_IDS.production;
+
+      // Dynamically inject Umami script
+      const script = document.createElement('script');
+      script.defer = true;
+      script.src = 'https://umami.cjunker.dev/script.js';
+      script.setAttribute('data-website-id', websiteId);
+      document.head.appendChild(script);
+
+      console.log(`📊 Umami Analytics: ${isStaging ? 'Staging' : 'Production'} (${websiteId})`);
+    })();
+  </script>
   <style>
     /* ========================================
        MODERN MOBILE-FIRST RESPONSIVE DESIGN
@@ -827,28 +851,37 @@
     // ============================================
 
     /**
-     * Detect if running in Instagram or Facebook in-app browser
-     * @returns {boolean} True if in-app browser detected
+     * Detect if should use compact mobile layout
+     * @returns {boolean} True if compact mode should be enabled
      */
-    function isInAppBrowser() {
+    function shouldUseCompactMode() {
       const ua = navigator.userAgent || navigator.vendor || window.opera;
+
       // Check for Instagram
       if (ua.indexOf('Instagram') > -1) return true;
+
       // Check for Facebook
       if (ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1) return true;
+
       // Check URL parameter override
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('inapp') === 'true') return true;
+
+      // Apply to ALL mobile browsers (width < 768px)
+      if (window.innerWidth < 768) return true;
+
       return false;
     }
 
-    // Apply in-app browser mode class
-    const inAppMode = isInAppBrowser();
-    if (inAppMode) {
+    // Apply compact mode for mobile and in-app browsers
+    const compactMode = shouldUseCompactMode();
+    if (compactMode) {
       document.body.classList.add('inapp-mode');
-      console.log('📱 In-app browser detected - compact layout with controls preserved');
+      const isMobile = window.innerWidth < 768;
+      const isInApp = navigator.userAgent.indexOf('Instagram') > -1 || navigator.userAgent.indexOf('FBAN') > -1 || navigator.userAgent.indexOf('FBAV') > -1;
+      console.log(`📱 Compact mode: ${isInApp ? 'In-app browser' : 'Mobile browser'} (${window.innerWidth}px)`);
     } else {
-      console.log('🌐 Standard browser mode');
+      console.log('🖥️ Desktop mode');
     }
 
     // API Configuration
