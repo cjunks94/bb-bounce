@@ -741,6 +741,50 @@
       margin-bottom: 0 !important;
       gap: 0 !important;
     }
+
+    /* ========================================
+       MODAL CLOSE BUTTON [X]
+       ======================================== */
+
+    .modal-close-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(255,0,0,0.2);
+      border: 2px solid #ff0000;
+      color: #ff0000;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease-out;
+      padding: 0;
+      line-height: 1;
+      z-index: 1001;
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(255,0,0,0.4);
+      border-color: #ff4444;
+      color: #ff4444;
+      transform: scale(1.1) rotate(90deg);
+    }
+
+    .modal-close-btn:active {
+      transform: scale(0.95) rotate(90deg);
+    }
+
+    /* Modal positioning context */
+    #gameOverScreen,
+    #settingsModal,
+    #leaderboardModal {
+      position: relative;
+    }
   </style>
 </head>
 <body>
@@ -785,6 +829,7 @@
 
   <!-- Game Over Modal -->
   <div id="gameOverScreen">
+    <button class="modal-close-btn" id="closeGameOverBtn">×</button>
     <h2>GAME OVER</h2>
     <p>Final Score: <span id="finalScore" style="color:#00ffff;">0</span></p>
     <p>Level Reached: <span id="finalLevel" style="color:#ffff00;">1</span></p>
@@ -800,6 +845,7 @@
 
   <!-- Leaderboard Modal (for mobile) -->
   <div id="leaderboardModal">
+    <button class="modal-close-btn" id="closeLeaderboardXBtn">×</button>
     <h2>🏆 TOP 10 GLOBAL</h2>
     <ol id="scoresListModal">
       <li style="text-align:center; color:#666;">Loading...</li>
@@ -810,6 +856,7 @@
 
   <!-- Settings Modal -->
   <div id="settingsModal">
+    <button class="modal-close-btn" id="closeSettingsXBtn">×</button>
     <h2>⚙️ GAME SETTINGS</h2>
 
     <div class="setting-group">
@@ -1788,6 +1835,14 @@
     document.getElementById('nameInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') submitScore();
     });
+
+    // Modal [X] close button event listeners
+    document.getElementById('closeGameOverBtn').addEventListener('click', () => {
+      document.getElementById('gameOverScreen').classList.remove('show');
+    });
+
+    document.getElementById('closeSettingsXBtn').addEventListener('click', closeSettings);
+    document.getElementById('closeLeaderboardXBtn').addEventListener('click', closeLeaderboard);
 
     // ============================================
     // PAGE VISIBILITY API - AUTO-PAUSE
