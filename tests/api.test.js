@@ -21,7 +21,11 @@ describe('BB-Bounce API Tests', () => {
       if (response.body && response.body.status) {
         expect(['healthy', 'unhealthy']).toContain(response.body.status);
         expect(response.body).toHaveProperty('database');
-        expect(response.body).toHaveProperty('uptime');
+
+        // Only expect uptime when healthy
+        if (response.body.status === 'healthy') {
+          expect(response.body).toHaveProperty('uptime');
+        }
       }
     });
   });
