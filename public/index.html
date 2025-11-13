@@ -1561,9 +1561,25 @@
     });
 
     canvas.addEventListener('click', (e) => {
-      // If paused, clicking unpauses (acts like Start button)
+      // If paused, only unpause if clicking the Start button
       if (gamePaused) {
-        togglePause();
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const clickX = (e.clientX - rect.left) * scaleX;
+        const clickY = (e.clientY - rect.top) * scaleY;
+
+        // Calculate button bounds (same as in draw function)
+        const buttonWidth = Math.min(canvas.width * 0.6, 300);
+        const buttonHeight = 80;
+        const buttonX = (canvas.width - buttonWidth) / 2;
+        const buttonY = (canvas.height - buttonHeight) / 2;
+
+        // Only unpause if click is within button bounds
+        if (clickX >= buttonX && clickX <= buttonX + buttonWidth &&
+            clickY >= buttonY && clickY <= buttonY + buttonHeight) {
+          togglePause();
+        }
       } else {
         // If not paused, launch ball
         launchBall();
@@ -1587,11 +1603,25 @@
       const touch = e.touches[0];
       // Scale touch position to canvas coordinates
       const scaleX = canvas.width / rect.width;
-      mouseX = (touch.clientX - rect.left) * scaleX;
+      const scaleY = canvas.height / rect.height;
+      const touchX = (touch.clientX - rect.left) * scaleX;
+      const touchY = (touch.clientY - rect.top) * scaleY;
+      mouseX = touchX;
 
-      // If paused, unpause (acts like Start button)
+      // If paused, only unpause if touching the Start button
       if (gamePaused) {
-        togglePause();
+        // Calculate button bounds (same as in draw function)
+        const buttonWidth = Math.min(canvas.width * 0.6, 300);
+        const buttonHeight = 80;
+        const buttonX = (canvas.width - buttonWidth) / 2;
+        const buttonY = (canvas.height - buttonHeight) / 2;
+
+        // Only unpause if touch is within button bounds
+        if (touchX >= buttonX && touchX <= buttonX + buttonWidth &&
+            touchY >= buttonY && touchY <= buttonY + buttonHeight) {
+          togglePause();
+        }
+        // If touch is outside button, do nothing (allows scrolling)
       } else {
         // If not paused, launch ball
         launchBall();
