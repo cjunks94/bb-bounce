@@ -1789,8 +1789,8 @@
       }
 
       // Profanity filter - basic list of common inappropriate words
-      // Case-insensitive, handles leetspeak variations
-      const profanityPattern = /\b(shit|fuck|damn|hell|ass|b[i1]tch|c[o0]ck|d[i1]ck|p[i1]ss|cunt|fag|n[i1]gg|tw[a4]t|wh[o0]r[e3]|[a4]ssh[o0]l[e3])\b/i;
+      // Case-insensitive, handles leetspeak variations and repeated letters
+      const profanityPattern = /\b(s+hit|fuc+k|dam+n|hel+|as+|b[i1]tc+h|c[o0]c+k|d[i1]c+k|p[i1]s+|cun+t|fag+|n[i1]g+|tw[a4]t|wh[o0]r[e3]|[a4]s+h[o0]l[e3])\b/i;
 
       // Also check for leetspeak normalized version
       const normalized = name.toLowerCase()
