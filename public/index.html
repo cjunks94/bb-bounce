@@ -6,6 +6,13 @@
   <title>BB-Bounce | Brick Breaker with Global Leaderboard</title>
   <meta name="description" content="Classic arcade Brick Breaker game with global leaderboard. Can you make it to the top 10?">
 
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ff00">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BB-Bounce">
+
   <!-- Umami Analytics (using public tracking endpoint) -->
   <script defer src="https://umami-tracking.cjunker.dev/script.js" data-website-id="8966340b-9995-44ac-9b62-5b6caffd6f82"></script>
   <style>
@@ -645,6 +652,18 @@
       </p>
     </div>
 
+    <div class="setting-group">
+      <label class="setting-label">Haptic Feedback (Vibration)</label>
+      <div class="speed-options">
+        <button class="haptic-option" data-haptic="off">Off</button>
+        <button class="haptic-option" data-haptic="minimal">Minimal</button>
+        <button class="haptic-option active" data-haptic="full">Full</button>
+      </div>
+      <p class="setting-description">
+        Controls vibration feedback on mobile devices. Full = all events, Minimal = major events only, Off = no vibration.
+      </p>
+    </div>
+
     <button class="btn" id="closeSettingsBtn">Close</button>
   </div>
 
@@ -685,6 +704,46 @@
     // API Configuration
     const API_URL = window.location.origin + '/api';
     const SCORE_SECRET = 'b3481ca0fc3799ed1e124e795eb34420d58281677a4ffa60dfd306b4c7f3fefd';
+
+    // ============================================
+    // HAPTIC FEEDBACK SYSTEM
+    // ============================================
+
+    /**
+     * Haptic feedback configuration
+     * Users can toggle: 'off', 'minimal', 'full'
+     */
+    let hapticsEnabled = localStorage.getItem('bbBounceHaptics') || 'full';
+
+    /**
+     * Trigger haptic feedback vibration
+     * @param {string} type - Type of haptic feedback (light, medium, heavy, loss)
+     */
+    function hapticFeedback(type = 'light') {
+      // Check if haptics are disabled
+      if (hapticsEnabled === 'off') return;
+
+      // Check browser support
+      if (!navigator.vibrate) return;
+
+      // Define vibration patterns
+      const patterns = {
+        light: 10,                    // Ball hit paddle or wall
+        medium: 30,                   // Brick destroyed
+        heavy: [50, 30, 50],         // Level complete
+        loss: [100, 50, 100, 50, 100], // Lose life
+        gameOver: [200, 100, 200]    // Game over
+      };
+
+      // Minimal mode: only heavy feedback (level complete, life lost)
+      if (hapticsEnabled === 'minimal' && !['heavy', 'loss', 'gameOver'].includes(type)) {
+        return;
+      }
+
+      // Trigger vibration
+      const pattern = patterns[type] || patterns.light;
+      navigator.vibrate(pattern);
+    }
 
     // Canvas setup
     const canvas = document.getElementById('canvas');
@@ -999,11 +1058,13 @@
       // Wall collision (left/right)
       if (ballX + ballSpeedX > canvas.width - BALL_RADIUS || ballX + ballSpeedX < BALL_RADIUS) {
         ballSpeedX = -ballSpeedX;
+        hapticFeedback('light'); // Wall bounce feedback
       }
 
       // Wall collision (top)
       if (ballY + ballSpeedY < BALL_RADIUS) {
         ballSpeedY = -ballSpeedY;
+        hapticFeedback('light'); // Top wall bounce feedback
       }
 
       // Paddle collision
@@ -1015,6 +1076,7 @@
           const effectiveSpeed = ballSpeed * speedMultiplier;
           ballSpeedX = effectiveSpeed * Math.sin(angle);
           ballSpeedY = -Math.abs(effectiveSpeed * Math.cos(angle)); // Always up
+          hapticFeedback('light'); // Paddle hit feedback
         }
       }
 
@@ -1056,12 +1118,21 @@
 
               // Award full score based on block difficulty
               score += calculateBlockScore(brick.maxHits);
+
+              // Haptic feedback based on brick difficulty
+              if (brick.maxHits >= 3) {
+                hapticFeedback('heavy'); // Multi-hit brick destroyed
+              } else {
+                hapticFeedback('medium'); // Standard brick destroyed
+              }
             } else {
               // Partial hit - award partial points and update color
               score += 5; // Partial credit for hitting but not destroying
 
               // Update brick color to show damage
               brick.color = getBrickColor(brick.maxHits, brick.currentHits, r);
+
+              hapticFeedback('light'); // Brick damaged but not destroyed
             }
 
             updateUI();
@@ -1090,11 +1161,13 @@
       resetBall();
       updateUI();
       showMessage(`Level ${level}!`, '#ffff00');
+      hapticFeedback('heavy'); // Level complete celebration!
     }
 
     function loseLife() {
       lives--;
       updateUI();
+      hapticFeedback('loss'); // Lose life feedback
       if (lives <= 0) {
         gameOver();
       } else {
@@ -1105,6 +1178,7 @@
 
     function gameOver() {
       gameRunning = false;
+      hapticFeedback('gameOver'); // Game over feedback
       if (score > highScore) {
         highScore = score;
         localStorage.setItem('bbBounceHigh', highScore);
@@ -1319,6 +1393,16 @@
         }
       });
 
+      // Update active button based on current haptic setting
+      document.querySelectorAll('.haptic-option').forEach(btn => {
+        const btnHaptic = btn.dataset.haptic;
+        if (btnHaptic === hapticsEnabled) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
       document.getElementById('settingsModal').classList.add('show');
     }
 
@@ -1338,6 +1422,21 @@
       });
     });
 
+    // Haptic option handlers
+    document.querySelectorAll('.haptic-option').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const newHaptic = e.target.dataset.haptic;
+        setHapticMode(newHaptic);
+
+        // Update active state
+        document.querySelectorAll('.haptic-option').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+
+        // Test haptic feedback immediately
+        hapticFeedback('medium');
+      });
+    });
+
     function setSpeedMultiplier(multiplier) {
       speedMultiplier = multiplier;
       localStorage.setItem('bbBounceSpeedMultiplier', multiplier);
@@ -1351,6 +1450,12 @@
         ballSpeedX *= ratio;
         ballSpeedY *= ratio;
       }
+    }
+
+    function setHapticMode(mode) {
+      hapticsEnabled = mode;
+      localStorage.setItem('bbBounceHaptics', mode);
+      console.log('Haptic feedback mode:', mode);
     }
 
     // ============================================
@@ -1449,6 +1554,81 @@
 
     document.getElementById('nameInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') submitScore();
+    });
+
+    // ============================================
+    // PAGE VISIBILITY API - AUTO-PAUSE
+    // ============================================
+
+    /**
+     * Auto-pause game when user switches tabs or minimizes browser
+     * Saves battery and prevents unfair gameplay
+     */
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Page is hidden - auto-pause if game is running
+        if (gameRunning && !gamePaused) {
+          togglePause();
+          console.log('Game auto-paused (tab hidden)');
+        }
+      } else {
+        // Page is visible again
+        // Don't auto-resume - let user manually resume for fairness
+        console.log('Game ready to resume (tab visible)');
+      }
+    });
+
+    // ============================================
+    // PWA SERVICE WORKER REGISTRATION
+    // ============================================
+
+    /**
+     * Register service worker for offline support and caching
+     */
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then((registration) => {
+            console.log('✅ Service Worker registered successfully:', registration.scope);
+
+            // Check for updates periodically
+            setInterval(() => {
+              registration.update();
+            }, 60000); // Check every minute
+          })
+          .catch((error) => {
+            console.error('❌ Service Worker registration failed:', error);
+          });
+      });
+
+      // Listen for service worker updates
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('🔄 Service Worker updated - page will reload for new version');
+        // Optional: Show user a toast notification about update
+      });
+    }
+
+    // ============================================
+    // PWA INSTALL PROMPT (Optional Enhancement)
+    // ============================================
+
+    let deferredPrompt;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent Chrome 67 and earlier from automatically showing the prompt
+      e.preventDefault();
+      // Stash the event so it can be triggered later
+      deferredPrompt = e;
+
+      console.log('💾 PWA install available!');
+
+      // Optional: Show custom install button in UI
+      // For now, users can install via browser menu
+    });
+
+    window.addEventListener('appinstalled', () => {
+      console.log('🎉 PWA installed successfully!');
+      deferredPrompt = null;
     });
 
     // ============================================
