@@ -1948,6 +1948,74 @@
     }
 
     // ============================================
+    // WINDOW RESIZE HANDLER
+    // ============================================
+
+    /**
+     * Handle window resize events
+     * Auto-pause game, resize canvas, and re-evaluate compact mode
+     */
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      // Debounce resize events (wait for resize to finish)
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        // Auto-pause game during resize for smooth transition
+        if (gameRunning && !gamePaused) {
+          togglePause();
+          console.log('⏸️ Game auto-paused (window resized)');
+        }
+
+        // Recalculate canvas dimensions
+        const oldWidth = canvas.width;
+        const oldHeight = canvas.height;
+        resizeCanvas();
+
+        // Re-evaluate compact mode based on new viewport width
+        const shouldBeCompact = shouldUseCompactMode();
+        const isCurrentlyCompact = document.body.classList.contains('inapp-mode');
+
+        if (shouldBeCompact && !isCurrentlyCompact) {
+          // Switch TO compact mode
+          document.body.classList.add('inapp-mode');
+          document.getElementById('restartBtn').textContent = '🎮 New';
+          document.getElementById('leaderboardBtn').textContent = '🏆';
+          document.getElementById('settingsBtn').textContent = '⚙️';
+          console.log('📱 Switched to compact mode');
+        } else if (!shouldBeCompact && isCurrentlyCompact) {
+          // Switch FROM compact mode to desktop
+          document.body.classList.remove('inapp-mode');
+          document.getElementById('restartBtn').textContent = 'New Game';
+          document.getElementById('leaderboardBtn').textContent = '🏆 Scores';
+          document.getElementById('settingsBtn').textContent = '⚙️';
+          console.log('🖥️ Switched to desktop mode');
+        }
+
+        // If game is running, adjust game elements to new canvas size
+        if (gameRunning) {
+          // Scale paddle position
+          paddleX = paddleX * (canvas.width / oldWidth);
+          paddleX = Math.max(0, Math.min(canvas.width - PADDLE_WIDTH, paddleX));
+
+          // Scale ball position if launched
+          if (ballLaunched) {
+            ballX = ballX * (canvas.width / oldWidth);
+            ballY = ballY * (canvas.height / oldHeight);
+          } else {
+            // If ball not launched, keep it with paddle
+            ballX = paddleX + PADDLE_WIDTH / 2;
+            ballY = canvas.height - 50;
+          }
+
+          // Reinitialize bricks with new dimensions
+          initBricks();
+        }
+
+        console.log(`🔄 Canvas resized: ${oldWidth}x${oldHeight} → ${canvas.width}x${canvas.height}`);
+      }, 250); // Wait 250ms after resize stops
+    });
+
+    // ============================================
     // START GAME
     // ============================================
 
