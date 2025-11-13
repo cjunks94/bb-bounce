@@ -519,6 +519,60 @@
       background: #00ff00;
       border-radius: 10px;
     }
+
+    /* ========================================
+       IN-APP BROWSER MODE (Instagram/Facebook)
+       Simplified layout with minimal padding and hidden UI
+       ======================================== */
+
+    body.inapp-mode {
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow-x: hidden !important;
+    }
+
+    body.inapp-mode #container {
+      padding: 0 !important;
+      margin: 0 !important;
+      gap: 5px !important;
+      max-width: 100% !important;
+    }
+
+    body.inapp-mode #gameArea {
+      gap: 5px !important;
+    }
+
+    /* Hide non-essential UI in in-app browsers */
+    body.inapp-mode h1,
+    body.inapp-mode #leaderboard,
+    body.inapp-mode #controls,
+    body.inapp-mode #gameControls {
+      display: none !important;
+    }
+
+    /* Canvas adjustments for in-app browsers */
+    body.inapp-mode #canvas {
+      width: 100% !important;
+      max-width: 100vw !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      margin: 0 !important;
+    }
+
+    /* Compact stats UI for in-app browsers */
+    body.inapp-mode #ui {
+      border-radius: 0 !important;
+      border-width: 0 0 1px 0 !important;
+      padding: 8px 5px !important;
+      margin: 0 !important;
+      font-size: clamp(0.8rem, 2vw, 0.95rem) !important;
+    }
+
+    body.inapp-mode #topBar {
+      margin-bottom: 0 !important;
+      gap: 0 !important;
+    }
   </style>
 </head>
 <body>
@@ -600,6 +654,33 @@
     // Vanilla JavaScript + Canvas API
     // Author: Christopher Junker
     // ============================================
+
+    // ============================================
+    // IN-APP BROWSER DETECTION
+    // ============================================
+
+    /**
+     * Detect if running in Instagram or Facebook in-app browser
+     * @returns {boolean} True if in-app browser detected
+     */
+    function isInAppBrowser() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      // Check for Instagram
+      if (ua.indexOf('Instagram') > -1) return true;
+      // Check for Facebook
+      if (ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1) return true;
+      // Check URL parameter override
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('inapp') === 'true') return true;
+      return false;
+    }
+
+    // Apply in-app browser mode class
+    const inAppMode = isInAppBrowser();
+    if (inAppMode) {
+      document.body.classList.add('inapp-mode');
+      console.log('In-app browser detected - simplified layout applied');
+    }
 
     // API Configuration
     const API_URL = window.location.origin + '/api';
