@@ -6,8 +6,39 @@
   <title>BB-Bounce | Brick Breaker with Global Leaderboard</title>
   <meta name="description" content="Classic arcade Brick Breaker game with global leaderboard. Can you make it to the top 10?">
 
-  <!-- Umami Analytics (using public tracking endpoint) -->
-  <script defer src="https://umami-tracking.cjunker.dev/script.js" data-website-id="8966340b-9995-44ac-9b62-5b6caffd6f82"></script>
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#00ff00">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="BB-Bounce">
+
+  <!-- Umami Analytics (environment-aware) -->
+  <script>
+    (function() {
+      // Detect environment based on hostname
+      const hostname = window.location.hostname;
+      const isStaging = hostname.includes('staging') || hostname === 'localhost' || hostname === '127.0.0.1';
+
+      // Environment-specific tracking IDs
+      const TRACKING_IDS = {
+        staging: 'fc7ca2dc-d007-4384-a606-d9e5d66e7c46',
+        production: '8966340b-9995-44ac-9b62-5b6caffd6f82'
+      };
+
+      // Select appropriate tracking ID
+      const websiteId = isStaging ? TRACKING_IDS.staging : TRACKING_IDS.production;
+
+      // Dynamically inject Umami script
+      const script = document.createElement('script');
+      script.defer = true;
+      script.src = 'https://umami-tracking.cjunker.dev/script.js';
+      script.setAttribute('data-website-id', websiteId);
+      document.head.appendChild(script);
+
+      console.log(`📊 Umami Analytics: ${isStaging ? 'Staging' : 'Production'} (${websiteId})`);
+    })();
+  </script>
   <style>
     /* ========================================
        MODERN MOBILE-FIRST RESPONSIVE DESIGN
@@ -129,30 +160,52 @@
       margin-top: 5px;
     }
 
-    /* Game Controls Box */
+    /* Game Controls Box - Uniform Grid Layout */
     #gameControls {
       background: rgba(0,0,0,0.8);
-      padding: clamp(10px, 3vw, 15px);
+      padding: clamp(12px, 3vw, 16px);
       border: 2px solid var(--primary-green);
       border-radius: var(--border-radius);
-      display: flex;
-      gap: var(--spacing-sm);
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: clamp(8px, 2vw, 12px);
+      align-items: stretch;
     }
 
     #gameControls .btn {
       margin: 0;
-      flex: 1;
-      max-width: 150px;
+      width: 100%;
+      padding: clamp(10px, 2.5vw, 14px);
+      font-size: clamp(0.85rem, 2vw, 1rem);
+      min-width: 0; /* Allow shrinking below content size */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
+    /* Mobile: Smaller buttons, tighter spacing */
     @media (max-width: 767px) {
+      #gameControls {
+        padding: clamp(8px, 2vw, 12px);
+        gap: clamp(6px, 1.5vw, 8px);
+      }
+
       #gameControls .btn {
-        font-size: clamp(0.8rem, 2vw, 0.9rem);
-        padding: 8px 12px;
-        min-width: 80px;
-        max-width: none;
+        font-size: clamp(0.75rem, 2vw, 0.85rem);
+        padding: clamp(8px, 2vw, 10px) clamp(6px, 1.5vw, 8px);
+      }
+    }
+
+    /* Very small screens: Stack in 2x2 grid */
+    @media (max-width: 400px) {
+      #gameControls {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      #gameControls .btn {
+        padding: 10px 8px;
+        font-size: 0.8rem;
       }
     }
 
@@ -256,30 +309,56 @@
       }
     }
 
-    /* Responsive Buttons */
+    /* Responsive Buttons - Uniform & Cute */
     .btn {
       background: var(--primary-green);
       color: var(--bg-dark);
-      border: none;
+      border: 2px solid transparent;
       padding: clamp(10px, 2vw, 12px) clamp(16px, 4vw, 24px);
       font-size: clamp(0.9rem, 2.5vw, 1rem);
       font-weight: bold;
       cursor: pointer;
-      border-radius: 5px;
+      border-radius: 8px;
       margin: 5px;
-      transition: all 0.3s;
+      transition: all 0.2s ease-out;
       font-family: 'Courier New', monospace;
       min-width: 100px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn:hover::before {
+      left: 100%;
     }
 
     .btn:hover {
       background: var(--secondary-cyan);
-      transform: scale(1.05);
-      box-shadow: 0 0 20px rgba(0,255,255,0.8);
+      border-color: var(--primary-green);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,255,255,0.6);
     }
 
     .btn:active {
-      transform: scale(0.95);
+      transform: translateY(0px);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    /* Focus state for accessibility */
+    .btn:focus {
+      outline: 2px solid var(--accent-yellow);
+      outline-offset: 2px;
     }
 
     /* Mobile button adjustments for game over modal */
@@ -466,6 +545,77 @@
       display: block;
     }
 
+    /* Leaderboard Modal (same styling as settings) */
+    #leaderboardModal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      border: 3px solid var(--accent-yellow);
+      border-radius: 15px;
+      padding: clamp(20px, 5vw, 40px);
+      z-index: 1000;
+      max-width: 90%;
+      width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    #leaderboardModal.show {
+      display: block;
+      animation: fadeIn 0.3s;
+    }
+
+    #leaderboardModal h2 {
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      color: var(--accent-yellow);
+      text-shadow: 0 0 10px var(--accent-yellow);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    #leaderboardModal ol {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 20px;
+    }
+
+    #leaderboardModal li {
+      padding: 12px;
+      margin-bottom: 8px;
+      background: rgba(0,255,0,0.1);
+      border: 1px solid #00ff00;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      transition: all 0.3s;
+    }
+
+    #leaderboardModal li:hover {
+      background: rgba(0,255,0,0.2);
+      transform: translateX(5px);
+    }
+
+    #leaderboardModal li:nth-child(1) { border-color: #ffd700; color: #ffd700; }
+    #leaderboardModal li:nth-child(2) { border-color: #c0c0c0; color: #c0c0c0; }
+    #leaderboardModal li:nth-child(3) { border-color: #cd7f32; color: #cd7f32; }
+
+    #leaderboardModal .btn {
+      width: 100%;
+      max-width: 200px;
+      margin: 10px auto 0;
+      display: block;
+    }
+
+    /* Desktop: Keep side leaderboard visible */
+    @media (min-width: 768px) {
+      #leaderboard {
+        display: block !important;
+      }
+    }
+
     /* Additional Mobile Optimizations */
     @media (max-width: 767px) {
       body {
@@ -519,6 +669,118 @@
       background: #00ff00;
       border-radius: 10px;
     }
+
+    /* ========================================
+       IN-APP BROWSER MODE (Instagram/Facebook)
+       Simplified layout with minimal padding and hidden UI
+       ======================================== */
+
+    body.inapp-mode {
+      padding: 0 !important;
+      margin: 0 !important;
+      overflow-x: hidden !important;
+    }
+
+    body.inapp-mode #container {
+      padding: 0 !important;
+      margin: 0 !important;
+      gap: 5px !important;
+      max-width: 100% !important;
+    }
+
+    body.inapp-mode #gameArea {
+      gap: 5px !important;
+    }
+
+    /* Hide non-essential UI in in-app browsers, but keep game controls! */
+    body.inapp-mode h1,
+    body.inapp-mode #leaderboard,
+    body.inapp-mode #controls {
+      display: none !important;
+    }
+
+    /* Keep game controls but make them more compact in in-app browsers */
+    body.inapp-mode #gameControls {
+      padding: 8px !important;
+      gap: 6px !important;
+      grid-template-columns: repeat(4, 1fr) !important;
+      border-radius: 5px !important;
+      box-shadow: 0 0 10px rgba(0,255,0,0.2) !important;
+    }
+
+    body.inapp-mode #gameControls .btn {
+      font-size: 0.75rem !important;
+      padding: 8px 6px !important;
+    }
+
+    /* On mobile (not just in-app), also hide side leaderboard */
+    @media (max-width: 767px) {
+      #leaderboard {
+        display: none !important;
+      }
+    }
+
+    /* Canvas adjustments for in-app browsers */
+    body.inapp-mode #canvas {
+      width: 100% !important;
+      max-width: 100vw !important;
+      border: 2px solid var(--primary-green) !important;
+      border-radius: 5px !important;
+      box-shadow: 0 0 15px rgba(0,255,0,0.3), inset 0 0 20px rgba(0,255,0,0.1) !important;
+      margin: 0 !important;
+    }
+
+    /* Compact stats UI for in-app browsers */
+    body.inapp-mode #ui {
+      border-radius: 5px !important;
+      border: 2px solid var(--primary-green) !important;
+      padding: 8px 5px !important;
+      margin: 0 !important;
+      font-size: clamp(0.8rem, 2vw, 0.95rem) !important;
+      box-shadow: 0 0 10px rgba(0,255,0,0.2) !important;
+    }
+
+    body.inapp-mode #topBar {
+      margin-bottom: 0 !important;
+      gap: 0 !important;
+    }
+
+    /* ========================================
+       MODAL CLOSE BUTTON [X]
+       ======================================== */
+
+    .modal-close-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(255,0,0,0.2);
+      border: 2px solid #ff0000;
+      color: #ff0000;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease-out;
+      padding: 0;
+      line-height: 1;
+      z-index: 1001;
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(255,0,0,0.4);
+      border-color: #ff4444;
+      color: #ff4444;
+      transform: scale(1.1) rotate(90deg);
+    }
+
+    .modal-close-btn:active {
+      transform: scale(0.95) rotate(90deg);
+    }
   </style>
 </head>
 <body>
@@ -537,7 +799,8 @@
         <div id="gameControls">
           <button class="btn" id="restartBtn">New Game</button>
           <button class="btn" id="pauseBtn">Pause</button>
-          <button class="btn" id="settingsBtn">⚙️ Settings</button>
+          <button class="btn" id="leaderboardBtn">🏆 Scores</button>
+          <button class="btn" id="settingsBtn">⚙️</button>
         </div>
       </div>
 
@@ -562,6 +825,7 @@
 
   <!-- Game Over Modal -->
   <div id="gameOverScreen">
+    <button class="modal-close-btn" id="closeGameOverBtn">×</button>
     <h2>GAME OVER</h2>
     <p>Final Score: <span id="finalScore" style="color:#00ffff;">0</span></p>
     <p>Level Reached: <span id="finalLevel" style="color:#ffff00;">1</span></p>
@@ -575,8 +839,20 @@
     <p id="submitMessage" style="margin-top:10px;"></p>
   </div>
 
+  <!-- Leaderboard Modal (for mobile) -->
+  <div id="leaderboardModal">
+    <button class="modal-close-btn" id="closeLeaderboardXBtn">×</button>
+    <h2>🏆 TOP 10 GLOBAL</h2>
+    <ol id="scoresListModal">
+      <li style="text-align:center; color:#666;">Loading...</li>
+    </ol>
+    <button class="btn" id="refreshModalBtn">Refresh</button>
+    <button class="btn" id="closeLeaderboardBtn">Close</button>
+  </div>
+
   <!-- Settings Modal -->
   <div id="settingsModal">
+    <button class="modal-close-btn" id="closeSettingsXBtn">×</button>
     <h2>⚙️ GAME SETTINGS</h2>
 
     <div class="setting-group">
@@ -591,6 +867,18 @@
       </p>
     </div>
 
+    <div class="setting-group">
+      <label class="setting-label">Haptic Feedback (Vibration)</label>
+      <div class="speed-options">
+        <button class="haptic-option" data-haptic="off">Off</button>
+        <button class="haptic-option" data-haptic="minimal">Minimal</button>
+        <button class="haptic-option active" data-haptic="full">Full</button>
+      </div>
+      <p class="setting-description">
+        Controls vibration feedback on mobile devices. Full = all events, Minimal = major events only, Off = no vibration.
+      </p>
+    </div>
+
     <button class="btn" id="closeSettingsBtn">Close</button>
   </div>
 
@@ -601,9 +889,101 @@
     // Author: Christopher Junker
     // ============================================
 
+    // ============================================
+    // IN-APP BROWSER DETECTION
+    // ============================================
+
+    /**
+     * Detect if should use compact mobile layout
+     * @returns {boolean} True if compact mode should be enabled
+     */
+    function shouldUseCompactMode() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+
+      // Check for Instagram
+      if (ua.indexOf('Instagram') > -1) return true;
+
+      // Check for Facebook
+      if (ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1) return true;
+
+      // Check URL parameter override
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('inapp') === 'true') return true;
+
+      // Apply to ALL mobile browsers (width < 768px)
+      if (window.innerWidth < 768) return true;
+
+      return false;
+    }
+
+    // Apply compact mode for mobile and in-app browsers
+    const compactMode = shouldUseCompactMode();
+    if (compactMode) {
+      document.body.classList.add('inapp-mode');
+      const isMobile = window.innerWidth < 768;
+      const isInApp = navigator.userAgent.indexOf('Instagram') > -1 || navigator.userAgent.indexOf('FBAN') > -1 || navigator.userAgent.indexOf('FBAV') > -1;
+      console.log(`📱 Compact mode: ${isInApp ? 'In-app browser' : 'Mobile browser'} (${window.innerWidth}px)`);
+
+      // Update button labels for compact mode (shorter text to prevent truncation)
+      document.getElementById('restartBtn').textContent = '🎮 New';
+      document.getElementById('leaderboardBtn').textContent = '🏆';
+      document.getElementById('settingsBtn').textContent = '⚙️';
+      // Pause button text changes dynamically based on game state, leave as-is
+    } else {
+      console.log('🖥️ Desktop mode');
+    }
+
     // API Configuration
     const API_URL = window.location.origin + '/api';
     const SCORE_SECRET = 'b3481ca0fc3799ed1e124e795eb34420d58281677a4ffa60dfd306b4c7f3fefd';
+
+    // ============================================
+    // HAPTIC FEEDBACK SYSTEM
+    // ============================================
+
+    /**
+     * Haptic feedback configuration
+     * Users can toggle: 'off', 'minimal', 'full'
+     */
+    let hapticsEnabled = localStorage.getItem('bbBounceHaptics') || 'full';
+
+    /**
+     * Trigger haptic feedback vibration
+     * @param {string} type - Type of haptic feedback (light, medium, heavy, loss)
+     */
+    function hapticFeedback(type = 'light') {
+      // Check if haptics are disabled
+      if (hapticsEnabled === 'off') return;
+
+      // Check browser support with robust feature detection
+      if (!navigator || typeof navigator.vibrate !== 'function') {
+        // Silently fail on unsupported browsers (Instagram, old browsers, desktop)
+        return;
+      }
+
+      // Define vibration patterns
+      const patterns = {
+        light: 10,                    // Ball hit paddle or wall
+        medium: 30,                   // Brick destroyed
+        heavy: [50, 30, 50],         // Level complete
+        loss: [100, 50, 100, 50, 100], // Lose life
+        gameOver: [200, 100, 200]    // Game over
+      };
+
+      // Minimal mode: only heavy feedback (level complete, life lost)
+      if (hapticsEnabled === 'minimal' && !['heavy', 'loss', 'gameOver'].includes(type)) {
+        return;
+      }
+
+      // Trigger vibration with try-catch for safety
+      try {
+        const pattern = patterns[type] || patterns.light;
+        navigator.vibrate(pattern);
+      } catch (error) {
+        // Silently fail if vibration throws an error
+        console.warn('Haptic feedback not supported:', error);
+      }
+    }
 
     // Canvas setup
     const canvas = document.getElementById('canvas');
@@ -918,11 +1298,13 @@
       // Wall collision (left/right)
       if (ballX + ballSpeedX > canvas.width - BALL_RADIUS || ballX + ballSpeedX < BALL_RADIUS) {
         ballSpeedX = -ballSpeedX;
+        hapticFeedback('light'); // Wall bounce feedback
       }
 
       // Wall collision (top)
       if (ballY + ballSpeedY < BALL_RADIUS) {
         ballSpeedY = -ballSpeedY;
+        hapticFeedback('light'); // Top wall bounce feedback
       }
 
       // Paddle collision
@@ -934,6 +1316,7 @@
           const effectiveSpeed = ballSpeed * speedMultiplier;
           ballSpeedX = effectiveSpeed * Math.sin(angle);
           ballSpeedY = -Math.abs(effectiveSpeed * Math.cos(angle)); // Always up
+          hapticFeedback('light'); // Paddle hit feedback
         }
       }
 
@@ -975,12 +1358,21 @@
 
               // Award full score based on block difficulty
               score += calculateBlockScore(brick.maxHits);
+
+              // Haptic feedback based on brick difficulty
+              if (brick.maxHits >= 3) {
+                hapticFeedback('heavy'); // Multi-hit brick destroyed
+              } else {
+                hapticFeedback('medium'); // Standard brick destroyed
+              }
             } else {
               // Partial hit - award partial points and update color
               score += 5; // Partial credit for hitting but not destroying
 
               // Update brick color to show damage
               brick.color = getBrickColor(brick.maxHits, brick.currentHits, r);
+
+              hapticFeedback('light'); // Brick damaged but not destroyed
             }
 
             updateUI();
@@ -1009,11 +1401,13 @@
       resetBall();
       updateUI();
       showMessage(`Level ${level}!`, '#ffff00');
+      hapticFeedback('heavy'); // Level complete celebration!
     }
 
     function loseLife() {
       lives--;
       updateUI();
+      hapticFeedback('loss'); // Lose life feedback
       if (lives <= 0) {
         gameOver();
       } else {
@@ -1024,6 +1418,7 @@
 
     function gameOver() {
       gameRunning = false;
+      hapticFeedback('gameOver'); // Game over feedback
       if (score > highScore) {
         highScore = score;
         localStorage.setItem('bbBounceHigh', highScore);
@@ -1207,8 +1602,13 @@
     document.getElementById('restartBtn').addEventListener('click', init);
     document.getElementById('pauseBtn').addEventListener('click', togglePause);
     document.getElementById('refreshBtn').addEventListener('click', loadLeaderboard);
+    document.getElementById('leaderboardBtn').addEventListener('click', openLeaderboard);
     document.getElementById('settingsBtn').addEventListener('click', openSettings);
     document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
+    document.getElementById('closeLeaderboardBtn').addEventListener('click', closeLeaderboard);
+    document.getElementById('refreshModalBtn').addEventListener('click', () => {
+      loadLeaderboard();
+    });
 
     function togglePause() {
       if (!gameRunning) return;
@@ -1238,11 +1638,49 @@
         }
       });
 
+      // Update active button based on current haptic setting (if available)
+      const hapticSection = document.querySelector('.setting-group:has(.haptic-option)');
+      if (navigator && typeof navigator.vibrate === 'function') {
+        // Haptic API supported - show settings
+        if (hapticSection) hapticSection.style.display = 'block';
+
+        document.querySelectorAll('.haptic-option').forEach(btn => {
+          const btnHaptic = btn.dataset.haptic;
+          if (btnHaptic === hapticsEnabled) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+      } else {
+        // Haptic API not supported - hide settings section
+        if (hapticSection) {
+          hapticSection.style.display = 'none';
+          console.log('ℹ️ Haptic settings hidden (not supported on this device)');
+        }
+      }
+
       document.getElementById('settingsModal').classList.add('show');
     }
 
     function closeSettings() {
       document.getElementById('settingsModal').classList.remove('show');
+    }
+
+    function openLeaderboard() {
+      // Pause game if running
+      if (gameRunning && !gamePaused) {
+        togglePause();
+      }
+
+      // Refresh leaderboard data
+      loadLeaderboard();
+
+      document.getElementById('leaderboardModal').classList.add('show');
+    }
+
+    function closeLeaderboard() {
+      document.getElementById('leaderboardModal').classList.remove('show');
     }
 
     // Speed option handlers
@@ -1254,6 +1692,21 @@
         // Update active state
         document.querySelectorAll('.speed-option').forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
+      });
+    });
+
+    // Haptic option handlers
+    document.querySelectorAll('.haptic-option').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const newHaptic = e.target.dataset.haptic;
+        setHapticMode(newHaptic);
+
+        // Update active state
+        document.querySelectorAll('.haptic-option').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+
+        // Test haptic feedback immediately
+        hapticFeedback('medium');
       });
     });
 
@@ -1272,6 +1725,12 @@
       }
     }
 
+    function setHapticMode(mode) {
+      hapticsEnabled = mode;
+      localStorage.setItem('bbBounceHaptics', mode);
+      console.log('Haptic feedback mode:', mode);
+    }
+
     // ============================================
     // LEADERBOARD API
     // ============================================
@@ -1288,22 +1747,25 @@
     }
 
     function displayLeaderboard(scores) {
-      const list = document.getElementById('scoresList');
-      if (scores.length === 0) {
-        list.innerHTML = '<li style="text-align:center;color:#666;">No scores yet!</li>';
-        return;
-      }
+      const markup = scores.length === 0
+        ? '<li style="text-align:center;color:#666;">No scores yet!</li>'
+        : scores.map((s, i) => {
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+            return `
+              <li>
+                <span class="rank">${medal}</span>
+                <span class="player-name">${s.name}</span>
+                <span class="player-score">${s.score.toLocaleString()}</span>
+              </li>
+            `;
+          }).join('');
 
-      list.innerHTML = scores.map((s, i) => {
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-        return `
-          <li>
-            <span class="rank">${medal}</span>
-            <span class="player-name">${s.name}</span>
-            <span class="player-score">${s.score.toLocaleString()}</span>
-          </li>
-        `;
-      }).join('');
+      // Update both sidebar and modal
+      const sidebarList = document.getElementById('scoresList');
+      const modalList = document.getElementById('scoresListModal');
+
+      if (sidebarList) sidebarList.innerHTML = markup;
+      if (modalList) modalList.innerHTML = markup;
     }
 
     async function submitScore() {
@@ -1368,6 +1830,192 @@
 
     document.getElementById('nameInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') submitScore();
+    });
+
+    // Modal [X] close button event listeners
+    document.getElementById('closeGameOverBtn').addEventListener('click', () => {
+      document.getElementById('gameOverScreen').classList.remove('show');
+    });
+
+    document.getElementById('closeSettingsXBtn').addEventListener('click', closeSettings);
+    document.getElementById('closeLeaderboardXBtn').addEventListener('click', closeLeaderboard);
+
+    // ============================================
+    // PAGE VISIBILITY API - AUTO-PAUSE
+    // ============================================
+
+    /**
+     * Auto-pause game when user switches tabs or minimizes browser
+     * Saves battery and prevents unfair gameplay
+     * WITH FALLBACK: Only runs if Page Visibility API is supported
+     */
+    if (typeof document.hidden !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        try {
+          if (document.hidden) {
+            // Page is hidden - auto-pause if game is running
+            if (gameRunning && !gamePaused) {
+              togglePause();
+              console.log('⏸️ Game auto-paused (tab hidden)');
+            }
+          } else {
+            // Page is visible again
+            // Don't auto-resume - let user manually resume for fairness
+            console.log('👀 Game ready to resume (tab visible)');
+          }
+        } catch (error) {
+          console.warn('Page Visibility API error:', error);
+        }
+      });
+      console.log('✅ Page Visibility API active');
+    } else {
+      console.log('⚠️ Page Visibility API not supported - auto-pause disabled');
+    }
+
+    // ============================================
+    // PWA SERVICE WORKER REGISTRATION
+    // ============================================
+
+    /**
+     * Register service worker for offline support and caching
+     * WITH FALLBACK: Only runs if Service Worker API is supported and in secure context
+     */
+    if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then((registration) => {
+            console.log('✅ Service Worker registered:', registration.scope);
+
+            // Check for updates periodically (only if supported)
+            if (registration.update) {
+              setInterval(() => {
+                registration.update().catch(err => {
+                  console.warn('Service Worker update check failed:', err);
+                });
+              }, 60000); // Check every minute
+            }
+          })
+          .catch((error) => {
+            console.warn('⚠️ Service Worker registration failed (may not be supported):', error);
+            console.log('📡 App will work without offline support');
+          });
+      });
+
+      // Listen for service worker updates (with error handling)
+      try {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('🔄 Service Worker updated');
+        });
+      } catch (error) {
+        console.warn('Service Worker event listener error:', error);
+      }
+    } else {
+      console.log('⚠️ Service Worker not supported or not in secure context');
+      console.log('📡 App works in online-only mode (this is fine!)');
+    }
+
+    // ============================================
+    // PWA INSTALL PROMPT (Optional Enhancement)
+    // ============================================
+
+    /**
+     * PWA Install Prompt Handler
+     * WITH FALLBACK: Only runs if browser supports beforeinstallprompt
+     */
+    let deferredPrompt;
+
+    // Check if install prompt is supported (Chrome, Edge, Samsung Internet)
+    if ('BeforeInstallPromptEvent' in window || true) { // Always attach, browser will ignore if not supported
+      try {
+        window.addEventListener('beforeinstallprompt', (e) => {
+          // Prevent Chrome 67 and earlier from automatically showing the prompt
+          e.preventDefault();
+          // Stash the event so it can be triggered later
+          deferredPrompt = e;
+
+          console.log('💾 PWA install available!');
+
+          // Optional: Show custom install button in UI
+          // For now, users can install via browser menu
+        });
+
+        window.addEventListener('appinstalled', () => {
+          console.log('🎉 PWA installed successfully!');
+          deferredPrompt = null;
+        });
+      } catch (error) {
+        console.warn('PWA install events not supported:', error);
+      }
+    } else {
+      console.log('📱 PWA install prompt not supported (may still be installable via browser menu)');
+    }
+
+    // ============================================
+    // WINDOW RESIZE HANDLER
+    // ============================================
+
+    /**
+     * Handle window resize events
+     * Auto-pause game, resize canvas, and re-evaluate compact mode
+     */
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      // Debounce resize events (wait for resize to finish)
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        // Auto-pause game during resize for smooth transition
+        if (gameRunning && !gamePaused) {
+          togglePause();
+          console.log('⏸️ Game auto-paused (window resized)');
+        }
+
+        // Recalculate canvas dimensions
+        const oldWidth = canvas.width;
+        const oldHeight = canvas.height;
+        resizeCanvas();
+
+        // Re-evaluate compact mode based on new viewport width
+        const shouldBeCompact = shouldUseCompactMode();
+        const isCurrentlyCompact = document.body.classList.contains('inapp-mode');
+
+        if (shouldBeCompact && !isCurrentlyCompact) {
+          // Switch TO compact mode
+          document.body.classList.add('inapp-mode');
+          document.getElementById('restartBtn').textContent = '🎮 New';
+          document.getElementById('leaderboardBtn').textContent = '🏆';
+          document.getElementById('settingsBtn').textContent = '⚙️';
+          console.log('📱 Switched to compact mode');
+        } else if (!shouldBeCompact && isCurrentlyCompact) {
+          // Switch FROM compact mode to desktop
+          document.body.classList.remove('inapp-mode');
+          document.getElementById('restartBtn').textContent = 'New Game';
+          document.getElementById('leaderboardBtn').textContent = '🏆 Scores';
+          document.getElementById('settingsBtn').textContent = '⚙️';
+          console.log('🖥️ Switched to desktop mode');
+        }
+
+        // If game is running, adjust game elements to new canvas size
+        if (gameRunning) {
+          // Scale paddle position
+          paddleX = paddleX * (canvas.width / oldWidth);
+          paddleX = Math.max(0, Math.min(canvas.width - PADDLE_WIDTH, paddleX));
+
+          // Scale ball position if launched
+          if (ballLaunched) {
+            ballX = ballX * (canvas.width / oldWidth);
+            ballY = ballY * (canvas.height / oldHeight);
+          } else {
+            // If ball not launched, keep it with paddle
+            ballX = paddleX + PADDLE_WIDTH / 2;
+            ballY = canvas.height - 50;
+          }
+
+          // Reinitialize bricks with new dimensions
+          initBricks();
+        }
+
+        console.log(`🔄 Canvas resized: ${oldWidth}x${oldHeight} → ${canvas.width}x${canvas.height}`);
+      }, 250); // Wait 250ms after resize stops
     });
 
     // ============================================
