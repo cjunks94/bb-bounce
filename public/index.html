@@ -831,7 +831,7 @@
     <p>Level Reached: <span id="finalLevel" style="color:#ffff00;">1</span></p>
     <p id="rankMessage" style="color:#00ff00; margin:20px 0;"></p>
 
-    <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20" value="">
+    <input type="text" id="nameInput" placeholder="Enter your name" maxlength="10" value="">
     <br>
     <button class="btn" id="submitBtn">Submit Score</button>
     <button class="btn" id="playAgainBtn">Play Again</button>
@@ -1768,11 +1768,66 @@
       if (modalList) modalList.innerHTML = markup;
     }
 
+    /**
+     * Validate player name for leaderboard submission
+     * @param {string} name - Player name to validate
+     * @returns {{valid: boolean, error: string}} Validation result
+     */
+    function validatePlayerName(name) {
+      // Check for empty name
+      if (!name || name.trim().length === 0) {
+        return { valid: false, error: 'Please enter a name' };
+      }
+
+      // Trim the name
+      name = name.trim();
+
+      // Check character whitelist (alphanumeric, spaces, hyphens, underscores only)
+      const validCharsRegex = /^[a-zA-Z0-9\s\-_]+$/;
+      if (!validCharsRegex.test(name)) {
+        return { valid: false, error: 'Only letters, numbers, spaces, - and _ allowed' };
+      }
+
+      // Profanity filter - basic list of common inappropriate words
+      // Case-insensitive, handles leetspeak variations
+      const profanityPattern = /\b(shit|fuck|damn|hell|ass|b[i1]tch|c[o0]ck|d[i1]ck|p[i1]ss|cunt|fag|n[i1]gg|tw[a4]t|wh[o0]r[e3]|[a4]ssh[o0]l[e3])\b/i;
+
+      // Also check for leetspeak normalized version
+      const normalized = name.toLowerCase()
+        .replace(/[0]/g, 'o')
+        .replace(/[1]/g, 'i')
+        .replace(/[3]/g, 'e')
+        .replace(/[4]/g, 'a')
+        .replace(/[5]/g, 's')
+        .replace(/[7]/g, 't')
+        .replace(/[$]/g, 's');
+
+      if (profanityPattern.test(name) || profanityPattern.test(normalized)) {
+        return { valid: false, error: 'Please choose a different name' };
+      }
+
+      // All checks passed
+      return { valid: true, error: '' };
+    }
+
     async function submitScore() {
-      const name = document.getElementById('nameInput').value.trim() || 'Anonymous';
       const loading = document.getElementById('loading');
       const submitBtn = document.getElementById('submitBtn');
       const message = document.getElementById('submitMessage');
+
+      // Get and validate player name
+      const rawName = document.getElementById('nameInput').value;
+      const validation = validatePlayerName(rawName);
+
+      // If validation fails, show error and stop
+      if (!validation.valid) {
+        message.style.color = '#ff0000';
+        message.textContent = validation.error;
+        return;
+      }
+
+      // Use validated name (trimmed)
+      const name = validation.valid ? rawName.trim() : 'Anonymous';
 
       loading.style.display = 'block';
       submitBtn.disabled = true;
