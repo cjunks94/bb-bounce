@@ -880,6 +880,12 @@
       const isMobile = window.innerWidth < 768;
       const isInApp = navigator.userAgent.indexOf('Instagram') > -1 || navigator.userAgent.indexOf('FBAN') > -1 || navigator.userAgent.indexOf('FBAV') > -1;
       console.log(`📱 Compact mode: ${isInApp ? 'In-app browser' : 'Mobile browser'} (${window.innerWidth}px)`);
+
+      // Update button labels for compact mode (shorter text to prevent truncation)
+      document.getElementById('restartBtn').textContent = '🎮 New';
+      document.getElementById('leaderboardBtn').textContent = '🏆';
+      document.getElementById('settingsBtn').textContent = '⚙️';
+      // Pause button text changes dynamically based on game state, leave as-is
     } else {
       console.log('🖥️ Desktop mode');
     }
