@@ -473,6 +473,77 @@
       display: block;
     }
 
+    /* Leaderboard Modal (same styling as settings) */
+    #leaderboardModal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      border: 3px solid var(--accent-yellow);
+      border-radius: 15px;
+      padding: clamp(20px, 5vw, 40px);
+      z-index: 1000;
+      max-width: 90%;
+      width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    #leaderboardModal.show {
+      display: block;
+      animation: fadeIn 0.3s;
+    }
+
+    #leaderboardModal h2 {
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      color: var(--accent-yellow);
+      text-shadow: 0 0 10px var(--accent-yellow);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    #leaderboardModal ol {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 20px;
+    }
+
+    #leaderboardModal li {
+      padding: 12px;
+      margin-bottom: 8px;
+      background: rgba(0,255,0,0.1);
+      border: 1px solid #00ff00;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      transition: all 0.3s;
+    }
+
+    #leaderboardModal li:hover {
+      background: rgba(0,255,0,0.2);
+      transform: translateX(5px);
+    }
+
+    #leaderboardModal li:nth-child(1) { border-color: #ffd700; color: #ffd700; }
+    #leaderboardModal li:nth-child(2) { border-color: #c0c0c0; color: #c0c0c0; }
+    #leaderboardModal li:nth-child(3) { border-color: #cd7f32; color: #cd7f32; }
+
+    #leaderboardModal .btn {
+      width: 100%;
+      max-width: 200px;
+      margin: 10px auto 0;
+      display: block;
+    }
+
+    /* Desktop: Keep side leaderboard visible */
+    @media (min-width: 768px) {
+      #leaderboard {
+        display: block !important;
+      }
+    }
+
     /* Additional Mobile Optimizations */
     @media (max-width: 767px) {
       body {
@@ -559,13 +630,21 @@
     /* Keep game controls but make them more compact */
     body.inapp-mode #gameControls {
       padding: 5px !important;
-      gap: 5px !important;
+      gap: 3px !important;
     }
 
     body.inapp-mode #gameControls .btn {
-      font-size: 0.75rem !important;
-      padding: 6px 10px !important;
-      min-width: 70px !important;
+      font-size: 0.7rem !important;
+      padding: 5px 8px !important;
+      min-width: 60px !important;
+      flex: 1 !important;
+    }
+
+    /* On mobile (not just in-app), also hide side leaderboard */
+    @media (max-width: 767px) {
+      #leaderboard {
+        display: none !important;
+      }
     }
 
     /* Canvas adjustments for in-app browsers */
@@ -609,7 +688,8 @@
         <div id="gameControls">
           <button class="btn" id="restartBtn">New Game</button>
           <button class="btn" id="pauseBtn">Pause</button>
-          <button class="btn" id="settingsBtn">⚙️ Settings</button>
+          <button class="btn" id="leaderboardBtn">🏆 Scores</button>
+          <button class="btn" id="settingsBtn">⚙️</button>
         </div>
       </div>
 
@@ -645,6 +725,16 @@
     <button class="btn" id="playAgainBtn">Play Again</button>
     <p id="loading">Submitting...</p>
     <p id="submitMessage" style="margin-top:10px;"></p>
+  </div>
+
+  <!-- Leaderboard Modal (for mobile) -->
+  <div id="leaderboardModal">
+    <h2>🏆 TOP 10 GLOBAL</h2>
+    <ol id="scoresListModal">
+      <li style="text-align:center; color:#666;">Loading...</li>
+    </ol>
+    <button class="btn" id="refreshModalBtn">Refresh</button>
+    <button class="btn" id="closeLeaderboardBtn">Close</button>
   </div>
 
   <!-- Settings Modal -->
@@ -1383,8 +1473,13 @@
     document.getElementById('restartBtn').addEventListener('click', init);
     document.getElementById('pauseBtn').addEventListener('click', togglePause);
     document.getElementById('refreshBtn').addEventListener('click', loadLeaderboard);
+    document.getElementById('leaderboardBtn').addEventListener('click', openLeaderboard);
     document.getElementById('settingsBtn').addEventListener('click', openSettings);
     document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
+    document.getElementById('closeLeaderboardBtn').addEventListener('click', closeLeaderboard);
+    document.getElementById('refreshModalBtn').addEventListener('click', () => {
+      loadLeaderboard();
+    });
 
     function togglePause() {
       if (!gameRunning) return;
@@ -1441,6 +1536,22 @@
 
     function closeSettings() {
       document.getElementById('settingsModal').classList.remove('show');
+    }
+
+    function openLeaderboard() {
+      // Pause game if running
+      if (gameRunning && !gamePaused) {
+        togglePause();
+      }
+
+      // Refresh leaderboard data
+      loadLeaderboard();
+
+      document.getElementById('leaderboardModal').classList.add('show');
+    }
+
+    function closeLeaderboard() {
+      document.getElementById('leaderboardModal').classList.remove('show');
     }
 
     // Speed option handlers
@@ -1507,22 +1618,25 @@
     }
 
     function displayLeaderboard(scores) {
-      const list = document.getElementById('scoresList');
-      if (scores.length === 0) {
-        list.innerHTML = '<li style="text-align:center;color:#666;">No scores yet!</li>';
-        return;
-      }
+      const markup = scores.length === 0
+        ? '<li style="text-align:center;color:#666;">No scores yet!</li>'
+        : scores.map((s, i) => {
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+            return `
+              <li>
+                <span class="rank">${medal}</span>
+                <span class="player-name">${s.name}</span>
+                <span class="player-score">${s.score.toLocaleString()}</span>
+              </li>
+            `;
+          }).join('');
 
-      list.innerHTML = scores.map((s, i) => {
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-        return `
-          <li>
-            <span class="rank">${medal}</span>
-            <span class="player-name">${s.name}</span>
-            <span class="player-score">${s.score.toLocaleString()}</span>
-          </li>
-        `;
-      }).join('');
+      // Update both sidebar and modal
+      const sidebarList = document.getElementById('scoresList');
+      const modalList = document.getElementById('scoresListModal');
+
+      if (sidebarList) sidebarList.innerHTML = markup;
+      if (modalList) modalList.innerHTML = markup;
     }
 
     async function submitScore() {
