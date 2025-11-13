@@ -549,12 +549,23 @@
       gap: 5px !important;
     }
 
-    /* Hide non-essential UI in in-app browsers */
+    /* Hide non-essential UI in in-app browsers, but keep game controls! */
     body.inapp-mode h1,
     body.inapp-mode #leaderboard,
-    body.inapp-mode #controls,
-    body.inapp-mode #gameControls {
+    body.inapp-mode #controls {
       display: none !important;
+    }
+
+    /* Keep game controls but make them more compact */
+    body.inapp-mode #gameControls {
+      padding: 5px !important;
+      gap: 5px !important;
+    }
+
+    body.inapp-mode #gameControls .btn {
+      font-size: 0.75rem !important;
+      padding: 6px 10px !important;
+      min-width: 70px !important;
     }
 
     /* Canvas adjustments for in-app browsers */
@@ -698,7 +709,9 @@
     const inAppMode = isInAppBrowser();
     if (inAppMode) {
       document.body.classList.add('inapp-mode');
-      console.log('In-app browser detected - simplified layout applied');
+      console.log('📱 In-app browser detected - compact layout with controls preserved');
+    } else {
+      console.log('🌐 Standard browser mode');
     }
 
     // API Configuration
@@ -723,8 +736,11 @@
       // Check if haptics are disabled
       if (hapticsEnabled === 'off') return;
 
-      // Check browser support
-      if (!navigator.vibrate) return;
+      // Check browser support with robust feature detection
+      if (!navigator || typeof navigator.vibrate !== 'function') {
+        // Silently fail on unsupported browsers (Instagram, old browsers, desktop)
+        return;
+      }
 
       // Define vibration patterns
       const patterns = {
@@ -740,9 +756,14 @@
         return;
       }
 
-      // Trigger vibration
-      const pattern = patterns[type] || patterns.light;
-      navigator.vibrate(pattern);
+      // Trigger vibration with try-catch for safety
+      try {
+        const pattern = patterns[type] || patterns.light;
+        navigator.vibrate(pattern);
+      } catch (error) {
+        // Silently fail if vibration throws an error
+        console.warn('Haptic feedback not supported:', error);
+      }
     }
 
     // Canvas setup
@@ -1393,15 +1414,27 @@
         }
       });
 
-      // Update active button based on current haptic setting
-      document.querySelectorAll('.haptic-option').forEach(btn => {
-        const btnHaptic = btn.dataset.haptic;
-        if (btnHaptic === hapticsEnabled) {
-          btn.classList.add('active');
-        } else {
-          btn.classList.remove('active');
+      // Update active button based on current haptic setting (if available)
+      const hapticSection = document.querySelector('.setting-group:has(.haptic-option)');
+      if (navigator && typeof navigator.vibrate === 'function') {
+        // Haptic API supported - show settings
+        if (hapticSection) hapticSection.style.display = 'block';
+
+        document.querySelectorAll('.haptic-option').forEach(btn => {
+          const btnHaptic = btn.dataset.haptic;
+          if (btnHaptic === hapticsEnabled) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+      } else {
+        // Haptic API not supported - hide settings section
+        if (hapticSection) {
+          hapticSection.style.display = 'none';
+          console.log('ℹ️ Haptic settings hidden (not supported on this device)');
         }
-      });
+      }
 
       document.getElementById('settingsModal').classList.add('show');
     }
@@ -1563,20 +1596,30 @@
     /**
      * Auto-pause game when user switches tabs or minimizes browser
      * Saves battery and prevents unfair gameplay
+     * WITH FALLBACK: Only runs if Page Visibility API is supported
      */
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        // Page is hidden - auto-pause if game is running
-        if (gameRunning && !gamePaused) {
-          togglePause();
-          console.log('Game auto-paused (tab hidden)');
+    if (typeof document.hidden !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        try {
+          if (document.hidden) {
+            // Page is hidden - auto-pause if game is running
+            if (gameRunning && !gamePaused) {
+              togglePause();
+              console.log('⏸️ Game auto-paused (tab hidden)');
+            }
+          } else {
+            // Page is visible again
+            // Don't auto-resume - let user manually resume for fairness
+            console.log('👀 Game ready to resume (tab visible)');
+          }
+        } catch (error) {
+          console.warn('Page Visibility API error:', error);
         }
-      } else {
-        // Page is visible again
-        // Don't auto-resume - let user manually resume for fairness
-        console.log('Game ready to resume (tab visible)');
-      }
-    });
+      });
+      console.log('✅ Page Visibility API active');
+    } else {
+      console.log('⚠️ Page Visibility API not supported - auto-pause disabled');
+    }
 
     // ============================================
     // PWA SERVICE WORKER REGISTRATION
@@ -1584,52 +1627,77 @@
 
     /**
      * Register service worker for offline support and caching
+     * WITH FALLBACK: Only runs if Service Worker API is supported and in secure context
      */
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost')) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/service-worker.js')
           .then((registration) => {
-            console.log('✅ Service Worker registered successfully:', registration.scope);
+            console.log('✅ Service Worker registered:', registration.scope);
 
-            // Check for updates periodically
-            setInterval(() => {
-              registration.update();
-            }, 60000); // Check every minute
+            // Check for updates periodically (only if supported)
+            if (registration.update) {
+              setInterval(() => {
+                registration.update().catch(err => {
+                  console.warn('Service Worker update check failed:', err);
+                });
+              }, 60000); // Check every minute
+            }
           })
           .catch((error) => {
-            console.error('❌ Service Worker registration failed:', error);
+            console.warn('⚠️ Service Worker registration failed (may not be supported):', error);
+            console.log('📡 App will work without offline support');
           });
       });
 
-      // Listen for service worker updates
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('🔄 Service Worker updated - page will reload for new version');
-        // Optional: Show user a toast notification about update
-      });
+      // Listen for service worker updates (with error handling)
+      try {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('🔄 Service Worker updated');
+        });
+      } catch (error) {
+        console.warn('Service Worker event listener error:', error);
+      }
+    } else {
+      console.log('⚠️ Service Worker not supported or not in secure context');
+      console.log('📡 App works in online-only mode (this is fine!)');
     }
 
     // ============================================
     // PWA INSTALL PROMPT (Optional Enhancement)
     // ============================================
 
+    /**
+     * PWA Install Prompt Handler
+     * WITH FALLBACK: Only runs if browser supports beforeinstallprompt
+     */
     let deferredPrompt;
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-      // Prevent Chrome 67 and earlier from automatically showing the prompt
-      e.preventDefault();
-      // Stash the event so it can be triggered later
-      deferredPrompt = e;
+    // Check if install prompt is supported (Chrome, Edge, Samsung Internet)
+    if ('BeforeInstallPromptEvent' in window || true) { // Always attach, browser will ignore if not supported
+      try {
+        window.addEventListener('beforeinstallprompt', (e) => {
+          // Prevent Chrome 67 and earlier from automatically showing the prompt
+          e.preventDefault();
+          // Stash the event so it can be triggered later
+          deferredPrompt = e;
 
-      console.log('💾 PWA install available!');
+          console.log('💾 PWA install available!');
 
-      // Optional: Show custom install button in UI
-      // For now, users can install via browser menu
-    });
+          // Optional: Show custom install button in UI
+          // For now, users can install via browser menu
+        });
 
-    window.addEventListener('appinstalled', () => {
-      console.log('🎉 PWA installed successfully!');
-      deferredPrompt = null;
-    });
+        window.addEventListener('appinstalled', () => {
+          console.log('🎉 PWA installed successfully!');
+          deferredPrompt = null;
+        });
+      } catch (error) {
+        console.warn('PWA install events not supported:', error);
+      }
+    } else {
+      console.log('📱 PWA install prompt not supported (may still be installable via browser menu)');
+    }
 
     // ============================================
     // START GAME
