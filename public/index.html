@@ -1021,10 +1021,15 @@
     // Game constants — speeds are in px/second (frame-rate independent)
     const PADDLE_WIDTH = 100;
     const PADDLE_HEIGHT = 15;
-    const PADDLE_SPEED = 480;          // was 8 px/frame at 60 fps
+    const PADDLE_SPEED = 480;          // px/sec (was 8 px/frame at 60 fps)
     const BALL_RADIUS = 10;
-    const BALL_SPEED_INITIAL = 240;    // was 4 px/frame at 60 fps
-    const BALL_SPEED_PER_LEVEL = 30;   // was 0.5 px/frame at 60 fps
+    // Ball speed is expressed as a fraction of canvas HEIGHT per second so
+    // the game feels consistent across canvas sizes. Mobile portrait is
+    // 600x800, desktop is 800x600 — using absolute px/sec made desktop feel
+    // noticeably faster because the playfield was shorter.
+    // 0.3 = ball traverses full canvas height in ~3.3 seconds.
+    const BALL_SPEED_INITIAL_RATIO = 0.3;
+    const BALL_SPEED_PER_LEVEL_RATIO = 0.0375;
     const BRICK_ROWS = 5;
     const BRICK_COLS = 10;
     const BRICK_WIDTH = 75;
@@ -1176,6 +1181,17 @@
      * @param {number} maxHits - Maximum hits required for this block
      * @returns {number} Points awarded
      */
+    /**
+     * Resolve absolute ball speed (px/sec) for a given level. Scales with
+     * canvas.height so the game feels consistent across portrait/landscape.
+     */
+    function computeBallSpeed(currentLevel) {
+      return canvas.height * (
+        BALL_SPEED_INITIAL_RATIO +
+        (currentLevel - 1) * BALL_SPEED_PER_LEVEL_RATIO
+      );
+    }
+
     function calculateBlockScore(maxHits) {
       const baseScore = 10;
       switch(maxHits) {
@@ -1206,7 +1222,7 @@
       }
 
       ballLaunched = false;
-      ballSpeed = BALL_SPEED_INITIAL;
+      ballSpeed = computeBallSpeed(level);
       lastFrameTime = 0;
       physicsAccumulator = 0;
       updateUI();
@@ -1446,7 +1462,7 @@
     function levelComplete() {
       score += level * 100; // Bonus
       level++;
-      ballSpeed += BALL_SPEED_PER_LEVEL;
+      ballSpeed = computeBallSpeed(level);
       initBricks();
       resetBall();
       updateUI();
@@ -2122,6 +2138,17 @@
             // If ball not launched, keep it with paddle
             ballX = paddleX + PADDLE_WIDTH / 2;
             ballY = canvas.height - 50;
+          }
+
+          // Re-scale ball speed to new canvas height (keeps "feels-like-3.3s
+          // to cross" invariant). Also rescale current velocity so the active
+          // ball doesn't suddenly slow down or speed up.
+          const oldBallSpeed = ballSpeed;
+          ballSpeed = computeBallSpeed(level);
+          if (ballLaunched && oldBallSpeed > 0) {
+            const ratio = ballSpeed / oldBallSpeed;
+            ballSpeedX *= ratio;
+            ballSpeedY *= ratio;
           }
 
           // Reinitialize bricks with new dimensions
