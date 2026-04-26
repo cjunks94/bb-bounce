@@ -1,0 +1,40 @@
+name: CI
+
+# Mirrors the local pre-commit hook (.husky/pre-commit) so the same gate
+# runs server-side. Local hook can be skipped with --no-verify; this one
+# cannot.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint + Test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Engines requires >=18 (package.json). 20 is the active LTS, 22 is
+        # current. Add 18 back if you need to support its quirks explicitly.
+        node: ['20', '22']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
