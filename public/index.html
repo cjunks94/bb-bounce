@@ -8,7 +8,14 @@
 
   <!-- PWA Manifest -->
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#00ff00">
+
+  <!-- Display font (VT323) for big numbers, titles, and overlay messages.
+       Body copy uses a system mono stack so the page is fast and stays
+       legible if Google Fonts is unreachable. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#39ff14">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="BB-Bounce">
@@ -51,21 +58,94 @@
     }
 
     :root {
-      --primary-green: #00ff00;
-      --secondary-cyan: #00ffff;
-      --accent-yellow: #ffff00;
-      --bg-dark: #0f0f23;
-      --bg-medium: #1a1a3e;
+      /* ============================================================
+         DESIGN TOKENS — neon / Tron / synthwave refresh (April 2026)
+         Layout sizing tokens unchanged; this block is purely visual.
+         ============================================================ */
+
+      /* --- Backgrounds (deepest at body, lighter for cards on top) --- */
+      --bg-deep:    #0a0e0c;
+      --bg-medium:  #0f1612;
+      --bg-card:    rgba(10, 16, 14, 0.85);
+
+      /* --- Borders --- */
+      --border-subtle: #1a3a1a;   /* dim card edge when not the focal point */
+      --border-accent: #39ff14;   /* primary neon outline */
+
+      /* --- Text --- */
+      --text-primary:    #39ff14; /* numbers, titles, interactive */
+      --text-secondary:  #5fa84a; /* labels, dim copy */
+      --text-muted:      #4a6a4a; /* footer, hints, disabled */
+      --text-on-accent:  #0a0e0c; /* text on a filled green button */
+
+      /* --- Status accents --- */
+      --accent-warn:   #f4d03f;   /* paused, level cleared */
+      --accent-danger: #ff4d4d;   /* game over */
+
+      /* --- Glow shadows. Toggle off via body.no-glow. --- */
+      --glow-soft:   0 0 8px rgba(57, 255, 20, 0.35);
+      --glow-medium: 0 0 16px rgba(57, 255, 20, 0.55);
+      --glow-strong: 0 0 28px rgba(57, 255, 20, 0.75);
+      --glow-warn:   0 0 12px rgba(244, 208, 63, 0.55);
+      --glow-danger: 0 0 12px rgba(255, 77, 77, 0.55);
+
+      /* --- Brick palettes ---
+         The default palette is muted / designerly. The vibrant palette is the
+         saturated rainbow the game shipped with — toggleable via
+         body.brick-palette-vibrant. These are exposed as CSS vars so the
+         canvas drawing code (chunk 3) can read them via getComputedStyle. */
+      --brick-row-0: #d63a3a; /* rust red */
+      --brick-row-1: #d99450; /* ochre */
+      --brick-row-2: #d4c84a; /* mustard */
+      --brick-row-3: #5fc44a; /* sage green */
+      --brick-row-4: #4a8fd6; /* navy blue */
+
+      /* --- Typography --- */
+      --font-display: 'VT323', 'Courier New', monospace;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Cascadia Code', 'Source Code Pro', 'Courier New', monospace;
+
+      /* --- Layout sizing (unchanged) --- */
       --border-radius: 10px;
       --spacing-sm: 10px;
       --spacing-md: 20px;
       --spacing-lg: 40px;
+
+      /* --- Legacy aliases ---
+         Older selectors throughout this file still reference these names.
+         They now resolve to the new tokens, so no per-rule rewrites are
+         needed in this chunk. Future cleanup can drop these once every
+         selector has been migrated. */
+      --primary-green:   var(--text-primary);
+      --secondary-cyan:  var(--text-primary); /* cyan dropped — see PR */
+      --accent-yellow:   var(--accent-warn);
+      --bg-dark:         var(--bg-deep);
+    }
+
+    /* Vibrant brick palette — opt-in per user setting (chunk 3 wires up the
+       toggle). Same five rows, original saturated values. */
+    body.brick-palette-vibrant {
+      --brick-row-0: #ff0000;
+      --brick-row-1: #ff7700;
+      --brick-row-2: #ffff00;
+      --brick-row-3: #00ff00;
+      --brick-row-4: #0077ff;
+    }
+
+    /* Glow off — strips text-shadow / box-shadow site-wide. The bang here is
+       deliberate: many shadows are inlined per-rule and we want one switch
+       that wins without rewriting every selector. */
+    body.no-glow * {
+      text-shadow: none !important;
+      box-shadow: none !important;
+    }
+    body.no-glow h1 {
+      animation: none; /* @keyframes glow has nothing to animate without shadows */
     }
 
     body {
-      font-family: 'Courier New', monospace;
-      background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-medium) 100%);
-      color: var(--primary-green);
+      font-family: var(--font-mono);
+      background: linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-medium) 100%);
+      color: var(--text-primary);
       min-height: 100vh;
       overflow-x: hidden;
       padding: var(--spacing-sm);
@@ -103,9 +183,11 @@
     }
 
     h1 {
-      font-size: clamp(1.8rem, 5vw, 2.5rem);
+      font-family: var(--font-display);
+      font-size: clamp(2.2rem, 6vw, 3rem);
+      letter-spacing: 0.08em;
       text-align: center;
-      text-shadow: 0 0 10px var(--primary-green), 0 0 20px var(--primary-green);
+      text-shadow: var(--glow-medium);
       margin-bottom: var(--spacing-md);
       animation: glow 2s ease-in-out infinite;
     }
@@ -118,8 +200,8 @@
     }
 
     @keyframes glow {
-      0%, 100% { text-shadow: 0 0 10px var(--primary-green), 0 0 20px var(--primary-green); }
-      50% { text-shadow: 0 0 20px var(--primary-green), 0 0 40px var(--primary-green); }
+      0%, 100% { text-shadow: var(--glow-medium); }
+      50%      { text-shadow: var(--glow-strong); }
     }
 
     /* Top Bar: Stats and Controls Side-by-Side */
@@ -211,8 +293,8 @@
 
     /* Responsive Canvas */
     #canvas {
-      background: #000;
-      border: 3px solid var(--primary-green);
+      background: var(--bg-deep);
+      border: 3px solid var(--border-accent);
       border-radius: var(--border-radius);
       display: block;
       width: 100%;
@@ -220,7 +302,7 @@
       height: auto;
       aspect-ratio: 4 / 3;
       margin: 0 auto;
-      box-shadow: 0 0 30px rgba(0,255,0,0.5);
+      box-shadow: var(--glow-strong);
       touch-action: none; /* Prevent scrolling on touch */
     }
 
@@ -234,13 +316,13 @@
 
     /* Responsive Leaderboard */
     #leaderboard {
-      background: rgba(0,0,0,0.9);
-      border: 2px solid var(--primary-green);
+      background: var(--bg-card);
+      border: 2px solid var(--border-accent);
       border-radius: var(--border-radius);
       padding: var(--spacing-md);
       max-height: 600px;
       overflow-y: auto;
-      box-shadow: 0 0 20px rgba(0,255,0,0.3);
+      box-shadow: var(--glow-soft);
     }
 
     /* Mobile: Full width, collapsible */
@@ -251,11 +333,13 @@
     }
 
     #leaderboard h2 {
+      font-family: var(--font-display);
       text-align: center;
       margin-bottom: 15px;
-      font-size: clamp(1.4rem, 4vw, 1.8rem);
-      color: var(--accent-yellow);
-      text-shadow: 0 0 10px var(--accent-yellow);
+      font-size: clamp(1.6rem, 4.5vw, 2rem);
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+      text-shadow: var(--glow-medium);
     }
 
     #leaderboard ol {
@@ -311,8 +395,8 @@
 
     /* Responsive Buttons - Uniform & Cute */
     .btn {
-      background: var(--primary-green);
-      color: var(--bg-dark);
+      background: var(--text-primary);
+      color: var(--text-on-accent);
       border: 2px solid transparent;
       padding: clamp(10px, 2vw, 12px) clamp(16px, 4vw, 24px);
       font-size: clamp(0.9rem, 2.5vw, 1rem);
@@ -321,9 +405,9 @@
       border-radius: 8px;
       margin: 5px;
       transition: all 0.2s ease-out;
-      font-family: 'Courier New', monospace;
+      font-family: var(--font-mono);
       min-width: 100px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3), var(--glow-soft);
       position: relative;
       overflow: hidden;
     }
@@ -344,10 +428,10 @@
     }
 
     .btn:hover {
-      background: var(--secondary-cyan);
-      border-color: var(--primary-green);
+      background: var(--text-primary);
+      border-color: var(--border-accent);
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,255,255,0.6);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4), var(--glow-medium);
     }
 
     .btn:active {

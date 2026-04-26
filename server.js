@@ -21,12 +21,21 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com" // Google Fonts CSS (VT323 display font)
+      ],
       scriptSrc: [
         "'self'",
         "'unsafe-inline'", // Needed for inline game code
         "https://umami-tracking.cjunker.dev", // Umami analytics (public tracking)
         "https://static.cloudflareinsights.com" // Cloudflare insights
+      ],
+      fontSrc: [
+        "'self'",
+        "https://fonts.gstatic.com", // Google Fonts WOFF2 files
+        "data:"
       ],
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: [
