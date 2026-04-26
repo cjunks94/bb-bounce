@@ -1074,7 +1074,7 @@
     let ballY = canvas.height - 30;
     let ballSpeedX = 0;
     let ballSpeedY = 0;
-    let ballSpeed = BALL_SPEED_INITIAL;
+    let ballSpeed = 0; // set by init() via computeBallSpeed(level)
 
     // Bricks
     let bricks = [];
