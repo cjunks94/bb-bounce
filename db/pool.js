@@ -11,7 +11,9 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: 20, // Maximum connections in pool
   idleTimeoutMillis: 30000, // Close idle clients after 30s
-  connectionTimeoutMillis: 5000, // Return error after 5s if connection fails
+  // 5s lost the race against Railway's internal DNS/Postgres warmup on cold
+  // deploys, which made the readiness probe fail and roll back deploys.
+  connectionTimeoutMillis: 10000,
 });
 
 // Log connection events
@@ -20,8 +22,10 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  console.error('❌ Unexpected database error:', err);
-  process.exit(-1); // Exit on critical database errors
+  // Log and continue. A single dropped idle client should not kill the
+  // container — real query failures surface at the call site, and the
+  // process-wide /health probe will catch sustained outages.
+  console.error('Unexpected database error (idle client):', err);
 });
 
 // Health check function

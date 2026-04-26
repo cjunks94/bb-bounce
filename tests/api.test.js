@@ -10,22 +10,32 @@ describe('BB-Bounce API Tests', () => {
   // Note: Database tests require a running PostgreSQL instance
   // Set DATABASE_URL in .env for full integration testing
 
-  describe('Health Check', () => {
-    it('should return health status', async () => {
-      const response = await request(app)
-        .get('/health');
+  describe('Health Check (liveness)', () => {
+    it('returns 200 with status=healthy and uptime, regardless of DB', async () => {
+      const response = await request(app).get('/health');
 
-      // Should return some form of health status
-      expect(response.body).toBeDefined();
+      expect(response.status).toBe(200);
+      expect(response.body.status).toBe('healthy');
+      expect(response.body).toHaveProperty('uptime');
+      expect(typeof response.body.uptime).toBe('number');
+      // Liveness must NOT depend on DB — it is what Railway uses for promotion.
+      expect(response.body).not.toHaveProperty('database');
+    });
+  });
 
-      if (response.body && response.body.status) {
-        expect(['healthy', 'unhealthy']).toContain(response.body.status);
-        expect(response.body).toHaveProperty('database');
+  describe('Health Check (readiness /health/db)', () => {
+    it('returns either 200 healthy or 503 unhealthy with a database field', async () => {
+      const response = await request(app).get('/health/db');
 
-        // Only expect uptime when healthy
-        if (response.body.status === 'healthy') {
-          expect(response.body).toHaveProperty('uptime');
-        }
+      expect([200, 503]).toContain(response.status);
+      expect(response.body).toHaveProperty('database');
+
+      if (response.status === 200) {
+        expect(response.body.status).toBe('healthy');
+        expect(response.body.database).toBe('connected');
+      } else {
+        expect(response.body.status).toBe('unhealthy');
+        expect(response.body.database).toBe('disconnected');
       }
     });
   });
