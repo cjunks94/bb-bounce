@@ -100,8 +100,10 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
+// Error handling middleware — Express identifies this as an error handler
+// because the function has 4 args; `next` must stay in the signature even
+// though we don't call it.
+app.use((err, req, res, _next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({
     error: 'Internal server error',
