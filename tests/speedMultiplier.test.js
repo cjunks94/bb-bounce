@@ -196,10 +196,9 @@ describe('Speed Multiplier Feature', () => {
   describe('Game Integration', () => {
     it('should not affect score calculation', () => {
       const brickPoints = 10;
-      const speedMultiplier = 3;
+      const _speedMultiplier = 3; // intentionally unused — score must not multiply by it
 
-      // Speed multiplier should NOT affect score
-      const score = brickPoints; // Not brickPoints * speedMultiplier
+      const score = brickPoints;
       expect(score).toBe(10);
     });
 
