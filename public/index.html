@@ -882,12 +882,23 @@
     <button class="btn" id="closeSettingsBtn">Close</button>
   </div>
 
+  <!-- Pure logic modules (no DOM / canvas). Loaded before the inline game
+       script so window.BBBricks / BBPhysics / BBValidation are ready. -->
+  <script src="js/bricks.js"></script>
+  <script src="js/physics.js"></script>
+  <script src="js/validation.js"></script>
+
   <script>
     // ============================================
     // BB-BOUNCE - BRICK BREAKER GAME
     // Vanilla JavaScript + Canvas API
     // Author: Christopher Junker
     // ============================================
+
+    // Pull pure helpers out of the global modules above.
+    const { calculateBrickRows, calculateBlockHitRequirement, getBrickColor, calculateBlockScore } = window.BBBricks;
+    const { paddleBounceVelocity, resolveBrickHit } = window.BBPhysics;
+    const { validatePlayerName } = window.BBValidation;
 
     // ============================================
     // IN-APP BROWSER DETECTION
@@ -1080,127 +1091,19 @@
     let bricks = [];
 
     // ============================================
-    // DIFFICULTY SCALING SYSTEM
+    // DIFFICULTY SCALING WRAPPERS
     // ============================================
+    // The pure formulas live in public/js/{bricks,physics}.js — see those
+    // modules for the rules. This wrapper closes over the live canvas and
+    // tuning ratios so call sites stay tidy.
 
-    /**
-     * Calculate number of brick rows based on current level
-     * Levels 1-5: Add 1 row per level (5, 6, 7, 8, 9 rows)
-     * Level 6+: Cap at 10 rows maximum
-     * @param {number} currentLevel - The current game level
-     * @returns {number} Number of brick rows (5-10)
-     */
-    function calculateBrickRows(currentLevel) {
-      const baseRows = 5;
-      const maxRows = 10;
-      return Math.min(baseRows + currentLevel - 1, maxRows);
-    }
-
-    /**
-     * Calculate block hit requirements based on level
-     * Levels 1-6: All 1-hit blocks
-     * Levels 7+: Progressive introduction of multi-hit blocks
-     * @param {number} currentLevel - The current game level
-     * @param {number} rowIndex - Row index (0-based)
-     * @returns {number} Required hits to destroy (1-4)
-     */
-    function calculateBlockHitRequirement(currentLevel, rowIndex) {
-      // Phase 1: Levels 1-6 - Standard 1-hit blocks only
-      if (currentLevel <= 6) {
-        return 1;
-      }
-
-      // Phase 2: Levels 7-9 - Introduce 2-hit blocks (50%)
-      if (currentLevel >= 7 && currentLevel <= 9) {
-        // Top 50% of rows become 2-hit blocks
-        const totalRows = calculateBrickRows(currentLevel);
-        const twoHitThreshold = Math.floor(totalRows / 2);
-        return rowIndex < twoHitThreshold ? 2 : 1;
-      }
-
-      // Phase 3: Levels 10-12 - Add 3-hit blocks
-      if (currentLevel >= 10 && currentLevel <= 12) {
-        const totalRows = calculateBrickRows(currentLevel);
-        const threeHitThreshold = Math.floor(totalRows * 0.25); // Top 25%
-        const twoHitThreshold = Math.floor(totalRows * 0.65); // Next 40%
-
-        if (rowIndex < threeHitThreshold) return 3;
-        if (rowIndex < twoHitThreshold) return 2;
-        return 1;
-      }
-
-      // Phase 4: Levels 13+ - Progressive hardening
-      if (currentLevel >= 13) {
-        const totalRows = calculateBrickRows(currentLevel);
-        const threeHitThreshold = Math.floor(totalRows * 0.5); // Top 50%
-        const twoHitThreshold = Math.floor(totalRows * 0.8); // Next 30%
-
-        if (rowIndex < threeHitThreshold) return 3;
-        if (rowIndex < twoHitThreshold) return 2;
-        return 1;
-      }
-
-      return 1;
-    }
-
-    /**
-     * Get color for brick based on hit requirement and current state
-     * @param {number} maxHits - Maximum hits required
-     * @param {number} currentHits - Current hit count
-     * @param {number} rowIndex - Row index for base color
-     * @returns {string} Hex color code
-     */
-    function getBrickColor(maxHits, currentHits, rowIndex) {
-      const baseColors = ['#ff0000', '#ff7700', '#ffff00', '#00ff00', '#0077ff'];
-      const baseColor = baseColors[rowIndex % baseColors.length];
-
-      // For 1-hit blocks, use standard bright colors
-      if (maxHits === 1) {
-        return baseColor;
-      }
-
-      // For multi-hit blocks, darken based on remaining hits
-      const hitRatio = currentHits / maxHits;
-
-      // Parse hex color
-      const r = parseInt(baseColor.substr(1, 2), 16);
-      const g = parseInt(baseColor.substr(3, 2), 16);
-      const b = parseInt(baseColor.substr(5, 2), 16);
-
-      // Darken color based on damage (more hits = darker)
-      const darkenFactor = 0.4 + (hitRatio * 0.6); // 40% to 100% brightness
-      const newR = Math.floor(r * darkenFactor);
-      const newG = Math.floor(g * darkenFactor);
-      const newB = Math.floor(b * darkenFactor);
-
-      return `#${newR.toString(16).padStart(2, '0')}${newG.toString(16).padStart(2, '0')}${newB.toString(16).padStart(2, '0')}`;
-    }
-
-    /**
-     * Calculate score for destroying a block
-     * @param {number} maxHits - Maximum hits required for this block
-     * @returns {number} Points awarded
-     */
-    /**
-     * Resolve absolute ball speed (px/sec) for a given level. Scales with
-     * canvas.height so the game feels consistent across portrait/landscape.
-     */
-    function computeBallSpeed(currentLevel) {
-      return canvas.height * (
-        BALL_SPEED_INITIAL_RATIO +
-        (currentLevel - 1) * BALL_SPEED_PER_LEVEL_RATIO
+    function computeBallSpeed(level) {
+      return window.BBPhysics.computeBallSpeed(
+        canvas.height,
+        level,
+        BALL_SPEED_INITIAL_RATIO,
+        BALL_SPEED_PER_LEVEL_RATIO
       );
-    }
-
-    function calculateBlockScore(maxHits) {
-      const baseScore = 10;
-      switch(maxHits) {
-        case 1: return baseScore;        // 10 points
-        case 2: return baseScore * 2.5;  // 25 points
-        case 3: return baseScore * 5;    // 50 points
-        case 4: return baseScore * 10;   // 100 points
-        default: return baseScore;
-      }
     }
 
     // ============================================
@@ -1357,19 +1260,17 @@
       }
 
       // Paddle collision — only when descending, and snap above the paddle so
-      // we cannot re-trigger on the next sub-step.
+      // we cannot re-trigger on the next sub-step. The angle math lives in
+      // BBPhysics.paddleBounceVelocity (public/js/physics.js).
       const paddleTop = canvas.height - 30;
       if (ballSpeedY > 0 &&
           ballY + BALL_RADIUS >= paddleTop &&
           ballY - BALL_RADIUS <= paddleTop + PADDLE_HEIGHT &&
           ballX >= paddleX - BALL_RADIUS &&
           ballX <= paddleX + PADDLE_WIDTH + BALL_RADIUS) {
-        const clampedX = Math.max(paddleX, Math.min(paddleX + PADDLE_WIDTH, ballX));
-        const hitPos = (clampedX - paddleX) / PADDLE_WIDTH;     // 0..1
-        const angle = (hitPos - 0.5) * Math.PI / 2;             // -45°..+45°
-        const speed = ballSpeed * speedMultiplier;
-        ballSpeedX = speed * Math.sin(angle);
-        ballSpeedY = -Math.abs(speed * Math.cos(angle));
+        const v = paddleBounceVelocity(ballX, paddleX, PADDLE_WIDTH, ballSpeed * speedMultiplier);
+        ballSpeedX = v.vx;
+        ballSpeedY = v.vy;
         ballY = paddleTop - BALL_RADIUS;
         hapticFeedback('light');
       }
@@ -1391,47 +1292,15 @@
           const brick = bricks[c][r];
           if (!brick || brick.status === 0) continue;
 
-          // Closest point on brick AABB to ball center → vector from that
-          // point to the ball center is the collision normal direction.
-          // This gives proper side-vs-top reflection (instead of the old
-          // code's always-flip-Y, which let the ball slide through an
-          // entire brick row on a glancing side hit).
-          const cx = Math.max(brick.x, Math.min(ballX, brick.x + brick.width));
-          const cy = Math.max(brick.y, Math.min(ballY, brick.y + brick.height));
-          const dx = ballX - cx;
-          const dy = ballY - cy;
-          const dist2 = dx * dx + dy * dy;
+          // Pure SDF resolution lives in BBPhysics.resolveBrickHit — see
+          // public/js/physics.js for the math.
+          const hit = resolveBrickHit(ballX, ballY, ballSpeedX, ballSpeedY, brick, BALL_RADIUS);
+          if (!hit) continue;
 
-          if (dist2 > BALL_RADIUS * BALL_RADIUS) continue;
-
-          let nx, ny;
-          if (dist2 < 1e-6) {
-            // Ball center inside the brick — pick the axis opposing the
-            // dominant velocity component so we always bounce the right way.
-            if (Math.abs(ballSpeedX) > Math.abs(ballSpeedY)) {
-              nx = ballSpeedX > 0 ? -1 : 1;
-              ny = 0;
-            } else {
-              nx = 0;
-              ny = ballSpeedY > 0 ? -1 : 1;
-            }
-          } else {
-            const dist = Math.sqrt(dist2);
-            nx = dx / dist;
-            ny = dy / dist;
-            // Push ball back out so we don't re-collide next sub-step
-            const overlap = BALL_RADIUS - dist;
-            ballX += nx * overlap;
-            ballY += ny * overlap;
-          }
-
-          // Reflect only if moving into the brick (v·n < 0). Skipping when
-          // already moving away avoids double-flips at corner contacts.
-          const vn = ballSpeedX * nx + ballSpeedY * ny;
-          if (vn < 0) {
-            ballSpeedX -= 2 * vn * nx;
-            ballSpeedY -= 2 * vn * ny;
-          }
+          ballX = hit.ballX;
+          ballY = hit.ballY;
+          ballSpeedX = hit.vx;
+          ballSpeedY = hit.vy;
 
           // Damage / destroy
           brick.currentHits++;
@@ -1843,47 +1712,8 @@
       if (modalList) modalList.innerHTML = markup;
     }
 
-    /**
-     * Validate player name for leaderboard submission
-     * @param {string} name - Player name to validate
-     * @returns {{valid: boolean, error: string}} Validation result
-     */
-    function validatePlayerName(name) {
-      // Check for empty name
-      if (!name || name.trim().length === 0) {
-        return { valid: false, error: 'Please enter a name' };
-      }
-
-      // Trim the name
-      name = name.trim();
-
-      // Check character whitelist (alphanumeric, spaces, hyphens, underscores only)
-      const validCharsRegex = /^[a-zA-Z0-9\s\-_]+$/;
-      if (!validCharsRegex.test(name)) {
-        return { valid: false, error: 'Only letters, numbers, spaces, - and _ allowed' };
-      }
-
-      // Profanity filter - basic list of common inappropriate words
-      // Case-insensitive, handles leetspeak variations and repeated letters
-      const profanityPattern = /\b(s+hit|fuc+k|dam+n|hel+|as+|b[i1]tc+h|c[o0]c+k|d[i1]c+k|p[i1]s+|cun+t|fag+|n[i1]g+|tw[a4]t|wh[o0]r[e3]|[a4]s+h[o0]l[e3])\b/i;
-
-      // Also check for leetspeak normalized version
-      const normalized = name.toLowerCase()
-        .replace(/[0]/g, 'o')
-        .replace(/[1]/g, 'i')
-        .replace(/[3]/g, 'e')
-        .replace(/[4]/g, 'a')
-        .replace(/[5]/g, 's')
-        .replace(/[7]/g, 't')
-        .replace(/[$]/g, 's');
-
-      if (profanityPattern.test(name) || profanityPattern.test(normalized)) {
-        return { valid: false, error: 'Please choose a different name' };
-      }
-
-      // All checks passed
-      return { valid: true, error: '' };
-    }
+    // validatePlayerName lives in public/js/validation.js (destructured at the
+    // top of this script).
 
     async function submitScore() {
       const loading = document.getElementById('loading');

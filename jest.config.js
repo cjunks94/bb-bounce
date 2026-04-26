@@ -10,6 +10,7 @@ module.exports = {
     'routes/**/*.js',
     'middleware/**/*.js',
     'db/**/*.js',
+    'public/js/**/*.js',
     '!node_modules/**'
   ],
   coverageThreshold: {
