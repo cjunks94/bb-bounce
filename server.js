@@ -63,8 +63,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 // API routes
 app.use('/api', leaderboardRoutes);
 
-// Health check endpoint
-app.get('/health', async (req, res) => {
+// Liveness probe — returns 200 as long as the process is alive and the HTTP
+// server is accepting connections. No DB call: this endpoint gates Railway's
+// deploy promotion (railway.json -> healthcheckPath), so it must NOT fail just
+// because Postgres is briefly unreachable on a cold start.
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    uptime: process.uptime()
+  });
+});
+
+// Readiness probe — checks that the database is reachable. Useful for
+// dashboards and external monitoring; not used by Railway for promotion.
+app.get('/health/db', async (req, res) => {
   const dbHealth = await healthCheck();
 
   if (!dbHealth.healthy) {
