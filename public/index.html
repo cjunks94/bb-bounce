@@ -20,32 +20,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="BB-Bounce">
 
-  <!-- Umami Analytics (environment-aware) -->
-  <script>
-    (function() {
-      // Detect environment based on hostname
-      const hostname = window.location.hostname;
-      const isStaging = hostname.includes('staging') || hostname === 'localhost' || hostname === '127.0.0.1';
-
-      // Environment-specific tracking IDs
-      const TRACKING_IDS = {
-        staging: 'fc7ca2dc-d007-4384-a606-d9e5d66e7c46',
-        production: '8966340b-9995-44ac-9b62-5b6caffd6f82'
-      };
-
-      // Select appropriate tracking ID
-      const websiteId = isStaging ? TRACKING_IDS.staging : TRACKING_IDS.production;
-
-      // Dynamically inject Umami script
-      const script = document.createElement('script');
-      script.defer = true;
-      script.src = 'https://umami-tracking.cjunker.dev/script.js';
-      script.setAttribute('data-website-id', websiteId);
-      document.head.appendChild(script);
-
-      console.log(`📊 Umami Analytics: ${isStaging ? 'Staging' : 'Production'} (${websiteId})`);
-    })();
-  </script>
   <style>
     /* ========================================
        MODERN MOBILE-FIRST RESPONSIVE DESIGN

@@ -29,7 +29,6 @@ app.use(helmet({
       scriptSrc: [
         "'self'",
         "'unsafe-inline'", // Needed for inline game code
-        "https://umami-tracking.cjunker.dev", // Umami analytics (public tracking)
         "https://static.cloudflareinsights.com" // Cloudflare insights
       ],
       fontSrc: [
@@ -38,10 +37,7 @@ app.use(helmet({
         "data:"
       ],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: [
-        "'self'",
-        "https://umami-tracking.cjunker.dev" // Allow Umami tracking connections
-      ]
+      connectSrc: ["'self'"]
     }
   }
 }));
