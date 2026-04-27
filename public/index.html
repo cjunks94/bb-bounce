@@ -285,52 +285,47 @@
     .hud-bar:nth-child(3) { height: 85%; }
     .hud-bar:nth-child(4) { height: 100%; }
 
-    /* Game Controls Box - Uniform Grid Layout */
+    /* Action button row — bare layout, no outer panel. The HUD cards next
+       to it already provide the chrome; nesting a second border made the
+       row look heavy and forced label truncation at narrow widths. */
     #gameControls {
-      background: rgba(0,0,0,0.8);
-      padding: clamp(12px, 3vw, 16px);
-      border: 2px solid var(--primary-green);
-      border-radius: var(--border-radius);
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: clamp(8px, 2vw, 12px);
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: clamp(6px, 1.5vw, 10px);
       align-items: stretch;
     }
 
     #gameControls .btn {
       margin: 0;
       width: 100%;
-      padding: clamp(10px, 2.5vw, 14px);
-      font-size: clamp(0.85rem, 2vw, 1rem);
-      min-width: 0; /* Allow shrinking below content size */
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      min-width: 0;
+      padding: clamp(10px, 2.2vw, 13px) clamp(10px, 2.5vw, 18px);
+      font-size: clamp(0.8rem, 2vw, 0.95rem);
     }
 
-    /* Mobile: Smaller buttons, tighter spacing */
-    @media (max-width: 767px) {
-      #gameControls {
-        padding: clamp(8px, 2vw, 12px);
-        gap: clamp(6px, 1.5vw, 8px);
-      }
-
-      #gameControls .btn {
-        font-size: clamp(0.75rem, 2vw, 0.85rem);
-        padding: clamp(8px, 2vw, 10px) clamp(6px, 1.5vw, 8px);
-      }
+    /* Icon-only button (settings cog) — sized to content so it doesn't
+       claim a 1fr column it doesn't need. */
+    .btn-icon {
+      flex: 0 0 auto;
+      width: auto !important;
+      min-width: 48px;
+      padding-left: 14px !important;
+      padding-right: 14px !important;
+      font-size: 1.05rem;
     }
 
-    /* Very small screens: Stack in 2x2 grid */
-    @media (max-width: 400px) {
+    /* Below ~480px the four-up row gets cramped. Drop to 2x2; the icon
+       button takes its own cell rather than tagging onto a label. */
+    @media (max-width: 479px) {
       #gameControls {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: 1fr 1fr;
         gap: 8px;
       }
-
       #gameControls .btn {
-        padding: 10px 8px;
-        font-size: 0.8rem;
+        padding: 10px 12px;
+      }
+      .btn-icon {
+        min-width: 0;
       }
     }
 
@@ -436,25 +431,33 @@
       }
     }
 
-    /* Responsive Buttons - Uniform & Cute */
+    /* Buttons.
+       Default = secondary: outlined neon, transparent fill. Cleaner against
+       the new card-based HUD and matches the April 2026 mockup.
+       .is-primary = focal action (e.g. "New Game" / "Resume" / "Try Again")
+       — solid green fill, dark text. Use sparingly — at most one per row. */
     .btn {
-      background: var(--text-primary);
-      color: var(--text-on-accent);
-      border: 2px solid transparent;
-      padding: clamp(10px, 2vw, 12px) clamp(16px, 4vw, 24px);
+      background: transparent;
+      color: var(--text-primary);
+      border: 2px solid var(--border-accent);
+      padding: clamp(10px, 2vw, 12px) clamp(16px, 4vw, 22px);
       font-size: clamp(0.9rem, 2.5vw, 1rem);
-      font-weight: bold;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
       cursor: pointer;
       border-radius: 8px;
       margin: 5px;
-      transition: all 0.2s ease-out;
-      font-family: var(--font-mono);
       min-width: 100px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.3), var(--glow-soft);
+      transition: all 0.18s ease-out;
+      box-shadow: var(--glow-soft);
       position: relative;
       overflow: hidden;
     }
 
+    /* Sweep highlight on hover — preserved from the old style but now reads
+       as a glow pass against the dark fill. */
     .btn::before {
       content: '';
       position: absolute;
@@ -462,30 +465,40 @@
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      background: linear-gradient(90deg, transparent, rgba(57,255,20,0.18), transparent);
       transition: left 0.5s;
     }
-
-    .btn:hover::before {
-      left: 100%;
-    }
+    .btn:hover::before { left: 100%; }
 
     .btn:hover {
-      background: var(--text-primary);
-      border-color: var(--border-accent);
+      background: rgba(57, 255, 20, 0.08);
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4), var(--glow-medium);
+      box-shadow: var(--glow-medium);
     }
 
     .btn:active {
-      transform: translateY(0px);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      transform: translateY(0);
+      box-shadow: var(--glow-soft);
     }
 
-    /* Focus state for accessibility */
-    .btn:focus {
-      outline: 2px solid var(--accent-yellow);
+    .btn:focus-visible {
+      outline: 2px solid var(--accent-warn);
       outline-offset: 2px;
+    }
+
+    /* Primary modifier — solid fill for the current focal action */
+    .btn.is-primary {
+      background: var(--text-primary);
+      color: var(--text-on-accent);
+      box-shadow: var(--glow-medium);
+    }
+    .btn.is-primary::before {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    }
+    .btn.is-primary:hover {
+      background: var(--text-primary);
+      color: var(--text-on-accent);
+      box-shadow: var(--glow-strong);
     }
 
     /* Mobile button adjustments for game over modal */
@@ -939,10 +952,10 @@
           </div>
         </div>
         <div id="gameControls">
-          <button class="btn" id="restartBtn">New Game</button>
+          <button class="btn is-primary" id="restartBtn">New Game</button>
           <button class="btn" id="pauseBtn">Pause</button>
           <button class="btn" id="leaderboardBtn">🏆 Scores</button>
-          <button class="btn" id="settingsBtn">⚙️</button>
+          <button class="btn btn-icon" id="settingsBtn" aria-label="Settings" title="Settings">⚙️</button>
         </div>
       </div>
 
@@ -975,8 +988,8 @@
 
     <input type="text" id="nameInput" placeholder="Enter your name" maxlength="10" value="">
     <br>
-    <button class="btn" id="submitBtn">Submit Score</button>
-    <button class="btn" id="playAgainBtn">Play Again</button>
+    <button class="btn is-primary" id="submitBtn">Submit Score</button>
+    <button class="btn is-primary" id="playAgainBtn">Play Again</button>
     <p id="loading">Submitting...</p>
     <p id="submitMessage" style="margin-top:10px;"></p>
   </div>
