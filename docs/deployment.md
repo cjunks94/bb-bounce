@@ -549,4 +549,4 @@ Before going live:
 
 **Last Updated**: November 2025
 
-**Next Steps**: [See README.md for gameplay and features](./README.md)
+**Next Steps**: [See README.md for gameplay and features](../README.md)
