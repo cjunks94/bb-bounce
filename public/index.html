@@ -192,29 +192,98 @@
       }
     }
 
-    /* Responsive UI Stats Panel */
+    /* HUD card row — score / lives / level / speed.
+       Cards sit directly on the page background (no outer panel) so each
+       has its own breathing room and clear hit target. */
     #ui {
-      background: rgba(0,0,0,0.8);
-      padding: clamp(10px, 3vw, 15px);
-      border: 2px solid var(--primary-green);
-      border-radius: var(--border-radius);
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: var(--spacing-sm);
-      font-size: clamp(0.9rem, 2.5vw, 1.1rem);
-      text-align: center;
+      grid-template-columns: repeat(4, 1fr);
+      gap: clamp(6px, 1.5vw, 10px);
     }
 
-    #ui > div {
-      padding: 5px;
+    /* Below ~480px the four-up row gets cramped. Drop to 2x2. */
+    @media (max-width: 479px) {
+      #ui {
+        grid-template-columns: repeat(2, 1fr);
+      }
     }
 
-    #ui span {
-      color: var(--secondary-cyan);
-      font-weight: bold;
-      display: block;
-      margin-top: 5px;
+    .hud-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--border-radius);
+      padding: clamp(8px, 2vw, 12px) clamp(10px, 2.5vw, 14px);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 64px;
+      justify-content: center;
     }
+
+    .hud-label {
+      font-family: var(--font-mono);
+      font-size: clamp(0.65rem, 1.6vw, 0.75rem);
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .hud-label #level {
+      color: var(--text-secondary);
+    }
+
+    .hud-value {
+      font-family: var(--font-display);
+      font-size: clamp(1.4rem, 4vw, 1.9rem);
+      line-height: 1;
+      color: var(--text-primary);
+      text-shadow: var(--glow-soft);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 1em;
+    }
+
+    /* Hearts row */
+    .hud-hearts { gap: 4px; font-size: clamp(1.1rem, 3vw, 1.4rem); }
+    .hud-heart { color: var(--text-primary); text-shadow: var(--glow-soft); }
+    .hud-heart-empty { color: var(--border-subtle); text-shadow: none; }
+
+    /* Level progress dots */
+    .hud-dots { gap: 4px; align-items: center; }
+    .hud-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 1px;
+      background: var(--border-subtle);
+      display: inline-block;
+    }
+    .hud-dot.is-filled {
+      background: var(--text-primary);
+      box-shadow: var(--glow-soft);
+    }
+
+    /* Speed gauge — ascending bars + Nx label */
+    .hud-speed { gap: 8px; }
+    .hud-bars {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 1em;
+    }
+    .hud-bar {
+      width: 4px;
+      background: var(--border-subtle);
+      border-radius: 1px;
+    }
+    .hud-bar.is-filled {
+      background: var(--text-primary);
+      box-shadow: var(--glow-soft);
+    }
+    .hud-bar:nth-child(1) { height: 35%; }
+    .hud-bar:nth-child(2) { height: 60%; }
+    .hud-bar:nth-child(3) { height: 85%; }
+    .hud-bar:nth-child(4) { height: 100%; }
 
     /* Game Controls Box - Uniform Grid Layout */
     #gameControls {
@@ -849,10 +918,25 @@
       <!-- Top Bar: Stats + Controls -->
       <div id="topBar">
         <div id="ui">
-          <div>Score: <span id="score">0</span></div>
-          <div>Lives: <span id="lives">3</span></div>
-          <div>Level: <span id="level">1</span></div>
-          <div>Speed: <span id="speedDisplay">1x</span></div>
+          <div class="hud-card">
+            <div class="hud-label">Score</div>
+            <div class="hud-value" id="score">0</div>
+          </div>
+          <div class="hud-card">
+            <div class="hud-label">Lives</div>
+            <div class="hud-value hud-hearts" id="lives" aria-label="Lives remaining"></div>
+          </div>
+          <div class="hud-card">
+            <div class="hud-label">Level <span id="level">01</span></div>
+            <div class="hud-value hud-dots" id="levelDots" aria-label="Level progress"></div>
+          </div>
+          <div class="hud-card">
+            <div class="hud-label">Speed</div>
+            <div class="hud-value hud-speed">
+              <span class="hud-bars" id="speedBars" aria-hidden="true"></span>
+              <span id="speedDisplay">1X</span>
+            </div>
+          </div>
         </div>
         <div id="gameControls">
           <button class="btn" id="restartBtn">New Game</button>
@@ -940,11 +1024,12 @@
     <button class="btn" id="closeSettingsBtn">Close</button>
   </div>
 
-  <!-- Pure logic modules (no DOM / canvas). Loaded before the inline game
-       script so window.BBBricks / BBPhysics / BBValidation are ready. -->
+  <!-- Pure logic + render modules. Loaded before the inline game script so
+       window.BBBricks / BBPhysics / BBValidation / BBHud are ready. -->
   <script src="js/bricks.js"></script>
   <script src="js/physics.js"></script>
   <script src="js/validation.js"></script>
+  <script src="js/hud.js"></script>
 
   <script>
     // ============================================
@@ -957,6 +1042,7 @@
     const { calculateBrickRows, calculateBlockHitRequirement, getBrickColor, calculateBlockScore } = window.BBBricks;
     const { paddleBounceVelocity, resolveBrickHit } = window.BBPhysics;
     const { validatePlayerName } = window.BBValidation;
+    const { renderLives, renderLevelDots, renderSpeedBars, formatLevel, formatScore } = window.BBHud;
 
     // ============================================
     // IN-APP BROWSER DETECTION
@@ -1517,10 +1603,12 @@
     }
 
     function updateUI() {
-      document.getElementById('score').textContent = score;
-      document.getElementById('lives').textContent = lives;
-      document.getElementById('level').textContent = level;
-      document.getElementById('speedDisplay').textContent = speedMultiplier + 'x';
+      document.getElementById('score').textContent = formatScore(score);
+      document.getElementById('lives').innerHTML = renderLives(lives);
+      document.getElementById('level').textContent = formatLevel(level);
+      document.getElementById('levelDots').innerHTML = renderLevelDots(level);
+      document.getElementById('speedBars').innerHTML = renderSpeedBars(Math.floor(speedMultiplier));
+      document.getElementById('speedDisplay').textContent = Math.floor(speedMultiplier) + 'X';
     }
 
     function showMessage(text, color) {
