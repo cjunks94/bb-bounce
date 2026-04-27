@@ -26,7 +26,9 @@ const nodeGlobals = {
   clearInterval: 'readonly',
   setImmediate: 'readonly',
   global: 'readonly',
-  globalThis: 'readonly'
+  globalThis: 'readonly',
+  URL: 'readonly',
+  URLSearchParams: 'readonly'
 };
 
 const browserGlobals = {

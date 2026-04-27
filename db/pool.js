@@ -5,10 +5,34 @@
 
 const { Pool } = require('pg');
 
-// Create connection pool with Railway-compatible settings
+/**
+ * Decide whether to enable SSL based on the connection URL itself, not on
+ * NODE_ENV. The previous gate (NODE_ENV === 'production') silently broke
+ * production whenever NODE_ENV was unset — the pool would attempt a
+ * non-SSL connection, the hosted Postgres would close the socket, and
+ * the only symptom was "Connection terminated unexpectedly".
+ *
+ * Heuristic: SSL on for any remote host. Local development (localhost,
+ * 127.0.0.1, 0.0.0.0, or Unix sockets) stays unencrypted.
+ */
+function shouldUseSsl(connectionString) {
+  if (!connectionString) return false;
+  try {
+    const { hostname } = new URL(connectionString);
+    if (!hostname) return false;
+    if (hostname.startsWith('/')) return false; // Unix socket path
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '0.0.0.0') return false;
+    return true;
+  } catch {
+    // Malformed URL — fall back to the conservative NODE_ENV gate so a
+    // bad value doesn't accidentally break local dev.
+    return process.env.NODE_ENV === 'production';
+  }
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: shouldUseSsl(process.env.DATABASE_URL) ? { rejectUnauthorized: false } : false,
   max: 20, // Maximum connections in pool
   idleTimeoutMillis: 30000, // Close idle clients after 30s
   // 5s lost the race against Railway's internal DNS/Postgres warmup on cold
@@ -39,4 +63,4 @@ async function healthCheck() {
   }
 }
 
-module.exports = { pool, healthCheck };
+module.exports = { pool, healthCheck, shouldUseSsl };
