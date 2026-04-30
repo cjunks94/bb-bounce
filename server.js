@@ -16,6 +16,14 @@ const leaderboardRoutes = require('./routes/leaderboard');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Behind Railway (and Cloudflare in production). Without this, express
+// throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR from express-rate-limit
+// because X-Forwarded-For is set but Express defaults to ignoring it.
+// Value 1 = trust exactly one upstream hop (Railway). The actual client IP
+// for rate limiting comes from CF-Connecting-IP via the rate-limit
+// keyGenerator (see middleware/rateLimit.js); req.ip is the fallback.
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
